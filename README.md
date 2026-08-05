@@ -182,16 +182,17 @@ The health endpoint should return a response containing `"status":"ok"`.
 
 Open the **Collect data** tab.
 
-1. Enter one or more departure airports as IATA codes, for example `NRN` or
+1. Choose the search type: **Flexible: anywhere**, **One-way trip to a desired
+   destination** or **Round trip to a desired destination**. Destination fields
+   only appear for the latter two choices.
+2. Enter one or more departure airports as IATA codes, for example `NRN` or
    `CGN,DUS,NRN`.
-2. Optional: Set the radius to, for example, `150 km` and click
+3. Optional: Set the radius to, for example, `150 km` and click
    **Add nearby Ryanair airports**. FareGraph adds active Ryanair airports
    within the radius and displays their distances.
-3. Optional: Enter one or more desired destination airports. You can expand
+4. For a targeted search, enter one or more comma-separated destination
+   airports. You can expand
    this region independently with **Add nearby Ryanair airports to destination**.
-4. Select **Anywhere**, **To desired destination**, **Back from desired
-   destination** or **Round trip**. For a round trip, set the minimum stay at
-   the destination; it is calculated from the actual arrival time.
 5. Select the earliest and latest possible departure dates.
 6. Set the trip duration, maximum number of flights and price limit.
 7. Choose **Ryanair live** or use **Demo data** for a safe test.
@@ -206,9 +207,9 @@ current level, number of requests, cache hits and found offers live.
 | --- | --- |
 | Departure airports | Airports from which the initial search starts |
 | Nearby-airport radius | Adds active Ryanair departure airports; it does not change ground transfers within a route |
-| Desired destination airports | Optional target region; each listed airport is accepted as a target |
+| Desired destination airports | Comma-separated target region shown for one-way and round-trip searches; each listed airport is accepted as a target |
 | Destination radius | Adds active Ryanair airports around the desired destination |
-| Search direction | Collect anywhere, towards the target, back from it, or there and back |
+| Search type | Collect flexibly anywhere, one-way to a target, or there and back |
 | Minimum stay at destination | For round trips, earliest return departure after actual arrival at a target |
 | Earliest/latest departure | Date window for the first flights |
 | Max. trip days | Maximum time from the first departure to the final arrival |
@@ -605,17 +606,18 @@ Die Gesundheitsprüfung sollte eine Antwort mit `"status":"ok"` liefern.
 
 Öffne den Reiter **Daten sammeln**.
 
-1. Trage einen oder mehrere Startflughäfen als IATA-Codes ein, beispielsweise
+1. Wähle die Suchart: **Flexibel: egal wohin**, **Einfache Reise zum
+   Wunschziel** oder **Hin- und Rückreise zum Wunschziel**. Die Ziel-Felder
+   erscheinen nur bei den beiden zielgerichteten Sucharten.
+2. Trage einen oder mehrere Startflughäfen als IATA-Codes ein, beispielsweise
    `NRN` oder `CGN,DUS,NRN`.
-2. Optional: Stelle den Radius auf beispielsweise `150 km` und klicke auf
+3. Optional: Stelle den Radius auf beispielsweise `150 km` und klicke auf
    **Nahe Ryanair-Flughäfen hinzufügen**. FareGraph ergänzt aktive
    Ryanair-Flughäfen im Umkreis und zeigt deren Entfernung an.
-3. Optional: Trage einen oder mehrere Wunschziel-Flughäfen ein. Mit **Nahe
+4. Trage bei einer zielgerichteten Suche einen oder mehrere komma-getrennte
+   Wunschziel-Flughäfen ein. Mit **Nahe
    Ryanair-Flughäfen zum Ziel hinzufügen** lässt sich diese Zielregion separat
    erweitern.
-4. Wähle **Egal wohin**, **Zum Wunschziel**, **Vom Wunschziel zurück** oder
-   **Hin und zurück**. Bei Hin und zurück wird der Mindestaufenthalt am Ziel ab
-   der tatsächlichen Ankunft berechnet.
 5. Wähle das früheste und späteste mögliche Startdatum.
 6. Lege Reisedauer, maximale Zahl der Flüge und Preislimit fest.
 7. Wähle **Ryanair live** oder für einen ungefährlichen Test **Demo-Daten**.
@@ -630,9 +632,9 @@ Ebene, Zahl der Abfragen, Cache-Treffer und gefundene Angebote live an.
 | --- | --- |
 | Startflughäfen | Flughäfen, von denen die erste Suche beginnt |
 | Radius für nahe Flughäfen | Ergänzt weitere aktive Ryanair-Startflughäfen; verändert nicht den Bodenwechsel einer Route |
-| Wunschziel-Flughäfen | Optionale Zielregion; jeder eingetragene Flughafen gilt als passendes Ziel |
+| Wunschziel-Flughäfen | Komma-getrennte Zielregion für einfache Hinreise oder Hin- und Rückreise; jeder eingetragene Flughafen gilt als passendes Ziel |
 | Zielradius | Ergänzt aktive Ryanair-Flughäfen rund um das Wunschziel |
-| Suchrichtung | Sammelt egal wohin, zum Ziel, vom Ziel zurück oder hin und zurück |
+| Suchart | Sammelt flexibel egal wohin, als einfache Hinreise oder hin und zurück |
 | Mindestaufenthalt am Wunschziel | Bei Hin und zurück frühester Rückflug ab tatsächlicher Ankunft am Ziel |
 | Frühester/spätester Start | Datumsfenster für die ersten Abflüge |
 | Max. Reisetage | Maximaler Zeitraum vom ersten Abflug bis zur letzten Ankunft |

@@ -2,7 +2,7 @@ const I18N = {
   de: {
     tagline: 'Finde günstige Rundreisen mit mehreren Stopps – flexibel nach Datum, Aufenthalt und Budget.',
     collectTab: 'Daten sammeln', routesTab: 'Routen finden', meetupTab: 'Gemeinsames Ziel',
-    newSearch: 'Neue Suche', startAirports: 'Startflughäfen (Komma getrennt)', nearbyRadius: 'Radius (km)', addNearby: 'Nahe Ryanair-Flughäfen hinzufügen', nearbyHint: 'Ergänzt aktive Ryanair-Flughäfen im gewählten Radius.', targetAirports: 'Wunschziel-Flughäfen (optional)', targetRadius: 'Zielradius (km)', addNearbyTarget: 'Nahe Ryanair-Flughäfen zum Ziel hinzufügen', targetHint: 'Leer lassen für die bisherige Suche „egal wohin“.', searchDirection: 'Suchrichtung', directionAny: 'Egal wohin', directionTo: 'Zum Wunschziel', directionFrom: 'Vom Wunschziel zurück', directionRound: 'Hin und zurück', targetStay: 'Mindestaufenthalt am Wunschziel (h)', earliestStart: 'Frühester Start', latestStart: 'Spätester Start',
+    newSearch: 'Neue Suche', searchDirection: 'Suchart', directionAny: 'Flexibel: egal wohin', directionTo: 'Einfache Reise zum Wunschziel', directionRound: 'Hin- und Rückreise zum Wunschziel', startAirports: 'Startflughäfen (Komma getrennt)', nearbyRadius: 'Radius (km)', addNearby: 'Nahe Ryanair-Flughäfen hinzufügen', nearbyHint: 'Ergänzt aktive Ryanair-Flughäfen im gewählten Radius.', targetAirports: 'Wunschziel-Flughäfen (Komma getrennt)', targetExample: 'z. B. LDE', targetRadius: 'Zielradius (km)', addNearbyTarget: 'Nahe Ryanair-Flughäfen zum Ziel hinzufügen', targetHint: 'Mehrere Flughäfen können mit Kommas getrennt eingetragen werden.', targetStay: 'Mindestaufenthalt am Wunschziel (h)', earliestStart: 'Frühester Start', latestStart: 'Spätester Start',
     maxTripDays: 'Max. Reisetage', maxFlights: 'Max. Flüge je Verbindung', earliestContinuation: 'Früheste Weiterreise ab Ankunft (h)',
     maxPriceFlight: 'Max. Preis je Flug (€)', maxGroundDistance: 'Max. Entfernung zwischen Bodenflughäfen (km)', dataSource: 'Datenquelle',
     ryanairLive: 'Ryanair live', demoData: 'Demo-Daten (zum Testen)', startSearch: 'Suche starten', howItWorks: 'So funktioniert es',
@@ -41,7 +41,7 @@ const I18N = {
   en: {
     tagline: 'Find affordable multi-stop trips – flexible by date, stay and budget.',
     collectTab: 'Collect data', routesTab: 'Find routes', meetupTab: 'Common destination',
-    newSearch: 'New search', startAirports: 'Departure airports (comma-separated)', nearbyRadius: 'Radius (km)', addNearby: 'Add nearby Ryanair airports', nearbyHint: 'Adds active Ryanair airports within the selected radius.', targetAirports: 'Desired destination airports (optional)', targetRadius: 'Destination radius (km)', addNearbyTarget: 'Add nearby Ryanair airports to destination', targetHint: 'Leave empty to keep the existing “anywhere” search.', searchDirection: 'Search direction', directionAny: 'Anywhere', directionTo: 'To desired destination', directionFrom: 'Back from desired destination', directionRound: 'Round trip', targetStay: 'Minimum stay at desired destination (h)', earliestStart: 'Earliest departure', latestStart: 'Latest departure',
+    newSearch: 'New search', searchDirection: 'Search type', directionAny: 'Flexible: anywhere', directionTo: 'One-way trip to a desired destination', directionRound: 'Round trip to a desired destination', startAirports: 'Departure airports (comma-separated)', nearbyRadius: 'Radius (km)', addNearby: 'Add nearby Ryanair airports', nearbyHint: 'Adds active Ryanair airports within the selected radius.', targetAirports: 'Desired destination airports (comma-separated)', targetExample: 'e.g. LDE', targetRadius: 'Destination radius (km)', addNearbyTarget: 'Add nearby Ryanair airports to destination', targetHint: 'Separate multiple airports with commas.', targetStay: 'Minimum stay at desired destination (h)', earliestStart: 'Earliest departure', latestStart: 'Latest departure',
     maxTripDays: 'Max. trip days', maxFlights: 'Max. flights per connection', earliestContinuation: 'Earliest onward departure after arrival (h)',
     maxPriceFlight: 'Max. price per flight (€)', maxGroundDistance: 'Max. distance between ground airports (km)', dataSource: 'Data source',
     ryanairLive: 'Ryanair live', demoData: 'Demo data (for testing)', startSearch: 'Start search', howItWorks: 'How it works',
@@ -85,6 +85,7 @@ function applyTranslations(){
   document.documentElement.lang=currentLanguage;
   document.querySelectorAll('[data-i18n]').forEach(el=>el.textContent=t(el.dataset.i18n));
   document.querySelectorAll('[data-i18n-tip]').forEach(el=>el.dataset.tip=t(el.dataset.i18nTip));
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>el.placeholder=t(el.dataset.i18nPlaceholder));
   document.querySelectorAll('.language-switcher button').forEach(btn=>btn.classList.toggle('selected-language',btn.dataset.lang===currentLanguage));
 }
 function setLanguage(language){localStorage.setItem('faregraph-language',language);location.reload()}
