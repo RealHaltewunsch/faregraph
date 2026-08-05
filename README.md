@@ -272,17 +272,18 @@ For two groups departing from different regions:
 3. Open **Common destination**.
 4. Select both datasets and the outbound departure window.
 5. Set the minimum and maximum stay in calendar days, the permitted number of
-   flights in each return route, the maximum arrival difference, the permitted
-   difference between the two return-departure dates and the total budget for
-   both round trips. A return-flight difference of `0` requires both groups to
-   return on the same calendar day.
+   flights in each outbound and return route, the maximum arrival difference,
+   the permitted difference between the two return-departure dates and the
+   total budget for both round trips. A return-flight difference of `0`
+   requires both groups to return on the same calendar day.
 6. Click **Find common destinations**.
 
-FareGraph combines a direct outbound flight for each group with a return route
-to that group's departure region. The stay is counted from the calendar date
-on which both groups have arrived. Results include all outbound and return
-segments. Return routes are optimized as a pair, so the cheapest return for one
-group cannot silently extend that group's stay beyond the permitted difference.
+FareGraph combines an outbound route for each group with a return route to that
+group's departure region. Both directions may contain stopovers. The stay is
+counted from the calendar date on which both groups have arrived. Results
+include all outbound and return segments. Return routes are optimized as a
+pair, so the cheapest return for one group cannot silently extend that group's
+stay beyond the permitted difference.
 
 ### Managing search jobs
 
@@ -709,17 +710,18 @@ Für zwei Gruppen, die von unterschiedlichen Regionen starten:
 3. Öffne **Gemeinsames Ziel**.
 4. Wähle beide Datensätze und das Abflugfenster für die Hinflüge.
 5. Lege minimalen und maximalen Aufenthalt in Kalendertagen, die erlaubte Zahl
-   der Flüge je Rückroute, die maximale Ankunftsdifferenz, den erlaubten
-   Unterschied zwischen den beiden Rückflugtagen und das Gesamtbudget für beide
-   Rundreisen fest. Eine Rückflug-Differenz von `0` verlangt denselben
-   Kalendertag für beide Gruppen.
+   der Flüge je Hin- und Rückroute, die maximale Ankunftsdifferenz, den
+   erlaubten Unterschied zwischen den beiden Rückflugtagen und das Gesamtbudget
+   für beide Rundreisen fest. Eine Rückflug-Differenz von `0` verlangt
+   denselben Kalendertag für beide Gruppen.
 6. Klicke auf **Gemeinsame Ziele finden**.
 
-FareGraph kombiniert für jede Gruppe einen direkten Hinflug mit einer
-Rückroute in ihre Startregion. Der Aufenthalt zählt ab dem Kalendertag, an dem
-beide Gruppen angekommen sind. Die Ergebnisse enthalten alle Hin- und
-Rückflugsegmente. Die Rückrouten werden als Paar optimiert, damit ein billigerer
-Rückflug für nur eine Gruppe deren Aufenthalt nicht unbemerkt verlängert.
+FareGraph kombiniert für jede Gruppe eine Hinroute mit einer Rückroute in ihre
+Startregion. Beide Richtungen dürfen Zwischenstopps enthalten. Der Aufenthalt
+zählt ab dem Kalendertag, an dem beide Gruppen angekommen sind. Die Ergebnisse
+enthalten alle Hin- und Rückflugsegmente. Die Rückrouten werden als Paar
+optimiert, damit ein billigerer Rückflug für nur eine Gruppe deren Aufenthalt
+nicht unbemerkt verlängert.
 
 ## Suchaufträge verwalten
 

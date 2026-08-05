@@ -7,6 +7,7 @@ import os
 import threading
 import time
 import uuid
+from bisect import bisect_left, bisect_right
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Literal
@@ -247,6 +248,8 @@ class MeetupQuery(BaseModel):
     max_arrival_difference_hours: float = Field(default=24, ge=0, le=168)
     min_stay_days: int = Field(default=3, ge=0, le=14)
     max_stay_days: int = Field(default=5, ge=0, le=14)
+    min_outbound_segments: int = Field(default=1, ge=1, le=6)
+    max_outbound_segments: int = Field(default=1, ge=1, le=6)
     min_return_segments: int = Field(default=1, ge=1, le=6)
     max_return_segments: int = Field(default=2, ge=1, le=6)
     max_return_difference_days: int = Field(default=0, ge=0, le=14)
@@ -261,6 +264,8 @@ class MeetupQuery(BaseModel):
             raise ValueError("Das Enddatum muss nach dem Startdatum liegen")
         if self.min_stay_days > self.max_stay_days:
             raise ValueError("Der minimale Aufenthalt darf den maximalen Aufenthalt nicht überschreiten")
+        if self.min_outbound_segments > self.max_outbound_segments:
+            raise ValueError("Min. Hinflüge darf Max. Hinflüge nicht überschreiten")
         if self.min_return_segments > self.max_return_segments:
             raise ValueError("Min. Rückflüge darf Max. Rückflüge nicht überschreiten")
         return self
@@ -791,12 +796,57 @@ def _local_date(value: datetime, airport: dict) -> date:
         return value.date()
 
 
-def _direct_offers(offers: list[dict], starts: set[str], departure_from: date, departure_to: date) -> list[dict]:
-    return [
-        offer for offer in offers
-        if offer["origin"] in starts
-        and departure_from <= _local_date(offer["departure_time"], offer["origin_airport"]) <= departure_to
-    ]
+def _outbound_routes(
+    offers: list[dict], home_airports: set[str], departure_from: date, departure_to: date,
+    min_segments: int, max_segments: int, min_connection_hours: int,
+    max_duration_days: int, max_price: float,
+) -> list[dict]:
+    by_origin: dict[str, list[dict]] = {}
+    for offer in offers:
+        by_origin.setdefault(offer["origin"], []).append(offer)
+    for origin_offers in by_origin.values():
+        origin_offers.sort(key=lambda offer: (offer["departure_time"], offer["price"]))
+
+    candidates: list[dict] = []
+    max_duration = timedelta(days=max_duration_days)
+
+    def walk(path: list[dict], airport: str, earliest: datetime | None, visited: set[str], total: float):
+        segments = len(path)
+        if segments >= min_segments and airport not in home_airports:
+            candidates.append({
+                "destination": airport,
+                "segments": path.copy(),
+                "total_price": round(total, 2),
+                "arrival_time": path[-1]["arrival_time"],
+                "destination_airport": path[-1]["destination_airport"],
+            })
+        if segments >= max_segments or total >= max_price or len(candidates) > 5000:
+            return
+        for stored_offer in by_origin.get(airport, []):
+            offer = stored_offer.copy()
+            if not path:
+                local_departure = _local_date(offer["departure_time"], offer["origin_airport"])
+                if not departure_from <= local_departure <= departure_to:
+                    continue
+            elif earliest and offer["departure_time"] < earliest:
+                continue
+            if offer["destination"] in visited or offer["destination"] in home_airports:
+                continue
+            if path and offer["arrival_time"] - path[0]["departure_time"] > max_duration:
+                continue
+            new_total = total + offer["price"]
+            if new_total > max_price:
+                continue
+            walk(
+                path + [offer], offer["destination"],
+                offer["arrival_time"] + timedelta(hours=min_connection_hours),
+                visited | {offer["destination"]}, new_total,
+            )
+
+    for start in home_airports:
+        walk([], start, None, {start}, 0.0)
+    candidates.sort(key=lambda route: (route["total_price"], route["arrival_time"]))
+    return candidates
 
 
 def _return_routes(
@@ -874,25 +924,46 @@ def find_common_destinations(query: MeetupQuery):
     all_offers_b = _stored_offers(query.job_b_id)
     home_a = set(settings_a["start_airports"])
     home_b = set(settings_b["start_airports"])
-    offers_a = _direct_offers(all_offers_a, home_a, query.departure_from, query.departure_to)
-    offers_b = _direct_offers(all_offers_b, home_b, query.departure_from, query.departure_to)
+    outbound_routes_a = _outbound_routes(
+        all_offers_a, home_a, query.departure_from, query.departure_to,
+        query.min_outbound_segments, query.max_outbound_segments,
+        int(settings_a.get("min_connection_hours", 0)), int(settings_a["max_trip_days"]),
+        query.max_total_price,
+    )
+    outbound_routes_b = _outbound_routes(
+        all_offers_b, home_b, query.departure_from, query.departure_to,
+        query.min_outbound_segments, query.max_outbound_segments,
+        int(settings_b.get("min_connection_hours", 0)), int(settings_b["max_trip_days"]),
+        query.max_total_price,
+    )
     b_by_destination: dict[str, list[dict]] = {}
-    for offer in offers_b:
-        b_by_destination.setdefault(offer["destination"], []).append(offer)
+    for route in outbound_routes_b:
+        b_by_destination.setdefault(route["destination"], []).append(route)
+    b_arrivals_by_destination: dict[str, list[datetime]] = {}
+    for destination, routes in b_by_destination.items():
+        routes.sort(key=lambda route: route["arrival_time"])
+        b_arrivals_by_destination[destination] = [route["arrival_time"] for route in routes]
 
     best_by_destination: dict[str, dict] = {}
     return_cache: dict[tuple, list[dict]] = {}
-    for offer_a in offers_a:
-        for offer_b in b_by_destination.get(offer_a["destination"], []):
-            arrival_difference = abs((offer_a["arrival_time"] - offer_b["arrival_time"]).total_seconds()) / 3600
+    for outbound_a in outbound_routes_a:
+        destination_routes_b = b_by_destination.get(outbound_a["destination"], [])
+        destination_arrivals_b = b_arrivals_by_destination.get(outbound_a["destination"], [])
+        arrival_window = timedelta(hours=query.max_arrival_difference_hours)
+        first_match = bisect_left(destination_arrivals_b, outbound_a["arrival_time"] - arrival_window)
+        last_match = bisect_right(destination_arrivals_b, outbound_a["arrival_time"] + arrival_window)
+        for outbound_b in destination_routes_b[first_match:last_match]:
+            arrival_difference = abs(
+                (outbound_a["arrival_time"] - outbound_b["arrival_time"]).total_seconds()
+            ) / 3600
             if arrival_difference > query.max_arrival_difference_hours:
                 continue
-            outbound_price = offer_a["price"] + offer_b["price"]
+            outbound_price = outbound_a["total_price"] + outbound_b["total_price"]
             if outbound_price > query.max_total_price:
                 continue
-            destination = offer_a["destination"]
-            destination_airport = offer_a["destination_airport"]
-            shared_arrival = max(offer_a["arrival_time"], offer_b["arrival_time"])
+            destination = outbound_a["destination"]
+            destination_airport = outbound_a["destination_airport"]
+            shared_arrival = max(outbound_a["arrival_time"], outbound_b["arrival_time"])
             shared_arrival_date = _local_date(shared_arrival, destination_airport)
             return_from = shared_arrival_date + timedelta(days=query.min_stay_days)
             return_to = shared_arrival_date + timedelta(days=query.max_stay_days)
@@ -932,15 +1003,17 @@ def find_common_destinations(query: MeetupQuery):
             )
 
             traveler_a = {
-                "outbound": offer_a,
+                "outbound": outbound_a["segments"][0],
+                "outbound_segments": outbound_a["segments"],
                 "return_segments": return_a["segments"],
-                "total_price": round(offer_a["price"] + return_a["total_price"], 2),
+                "total_price": round(outbound_a["total_price"] + return_a["total_price"], 2),
                 "stay_days": (return_a["departure_date"] - shared_arrival_date).days,
             }
             traveler_b = {
-                "outbound": offer_b,
+                "outbound": outbound_b["segments"][0],
+                "outbound_segments": outbound_b["segments"],
                 "return_segments": return_b["segments"],
-                "total_price": round(offer_b["price"] + return_b["total_price"], 2),
+                "total_price": round(outbound_b["total_price"] + return_b["total_price"], 2),
                 "stay_days": (return_b["departure_date"] - shared_arrival_date).days,
             }
             candidate = {
