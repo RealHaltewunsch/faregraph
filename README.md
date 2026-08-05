@@ -14,7 +14,7 @@ Examples:
 
 - `CGN → PMI → STN → BGY → NRN`
 - depart from Cologne and return through another nearby airport
-- find the cheapest possible route with two to five flight segments
+- find the cheapest possible route with two to six flight segments
 - let two groups of friends depart from different places and find a common destination
 - continue from a nearby airport, for example `NRN ⇢ EIN`
 
@@ -440,7 +440,7 @@ Beispiele:
 
 - `CGN → PMI → STN → BGY → NRN`
 - Start in Köln, Rückkehr über einen anderen Flughafen in der Umgebung
-- möglichst günstige Route mit zwei bis fünf Flugsegmenten
+- möglichst günstige Route mit zwei bis sechs Flugsegmenten
 - zwei Freundesgruppen starten an verschiedenen Orten und suchen ein gemeinsames Ziel
 - Weiterreise über einen nahe gelegenen Flughafen, zum Beispiel `NRN ⇢ EIN`
 

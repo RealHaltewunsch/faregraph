@@ -191,7 +191,7 @@ class JobCreate(BaseModel):
     end_date: date
     min_trip_days: int = Field(default=1, ge=1, le=14)
     max_trip_days: int = Field(default=5, ge=1, le=14)
-    max_depth: int = Field(default=3, ge=1, le=5)
+    max_depth: int = Field(default=3, ge=1, le=6)
     min_connection_hours: int = Field(default=0, ge=0, le=168)
     max_price_per_leg: float = Field(default=80, gt=0, le=1000)
     max_destinations_per_node: int = Field(default=12, ge=1, le=50)
@@ -221,8 +221,8 @@ class RouteQuery(BaseModel):
     job_id: uuid.UUID
     end_airports: list[str] = Field(min_length=1)
     required_visit_airports: list[str] = Field(default_factory=list)
-    min_segments: int = Field(default=2, ge=1, le=5)
-    max_segments: int = Field(default=4, ge=1, le=5)
+    min_segments: int = Field(default=2, ge=1, le=6)
+    max_segments: int = Field(default=4, ge=1, le=6)
     min_connection_hours: int = Field(default=8, ge=0, le=168)
     min_target_stay_hours: int = Field(default=0, ge=0, le=336)
     max_airport_transfer_km: float = Field(default=0, ge=0, le=5000)
@@ -238,8 +238,8 @@ class MeetupQuery(BaseModel):
     max_arrival_difference_hours: float = Field(default=24, ge=0, le=168)
     min_stay_days: int = Field(default=3, ge=0, le=14)
     max_stay_days: int = Field(default=5, ge=0, le=14)
-    min_return_segments: int = Field(default=1, ge=1, le=5)
-    max_return_segments: int = Field(default=2, ge=1, le=5)
+    min_return_segments: int = Field(default=1, ge=1, le=6)
+    max_return_segments: int = Field(default=2, ge=1, le=6)
     max_total_price: float = Field(default=300, gt=0, le=5000)
     limit: int = Field(default=30, ge=1, le=100)
 
