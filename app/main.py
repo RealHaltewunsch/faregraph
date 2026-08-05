@@ -98,6 +98,8 @@ def init_db():
                     ALTER TABLE search_jobs ADD COLUMN IF NOT EXISTS started_at timestamptz;
                     ALTER TABLE search_jobs ADD COLUMN IF NOT EXISTS run_started_at timestamptz;
                     ALTER TABLE search_jobs ADD COLUMN IF NOT EXISTS active_seconds double precision NOT NULL DEFAULT 0;
+                    ALTER TABLE search_jobs ADD COLUMN IF NOT EXISTS data_fetched_from timestamptz;
+                    ALTER TABLE search_jobs ADD COLUMN IF NOT EXISTS data_fetched_to timestamptz;
                     UPDATE search_jobs SET started_at=created_at,
                       active_seconds=GREATEST(0,EXTRACT(epoch FROM (updated_at-created_at)))
                     WHERE started_at IS NULL AND queries_done > 0;
@@ -182,6 +184,9 @@ def startup():
 
 class JobCreate(BaseModel):
     start_airports: list[str] = Field(min_length=1, max_length=50)
+    target_airports: list[str] = Field(default_factory=list, max_length=50)
+    search_direction: Literal["any", "to_target", "from_target", "round_trip"] = "any"
+    min_target_stay_hours: int = Field(default=24, ge=0, le=336)
     start_date: date
     end_date: date
     max_trip_days: int = Field(default=5, ge=1, le=14)
@@ -190,7 +195,7 @@ class JobCreate(BaseModel):
     max_price_per_leg: float = Field(default=80, gt=0, le=1000)
     max_destinations_per_node: int = Field(default=12, ge=1, le=50)
     max_airport_transfer_km: float = Field(default=0, ge=0, le=5000)
-    provider: Literal["demo", "ryanair"] = "demo"
+    provider: Literal["demo", "ryanair"] = "ryanair"
 
     @model_validator(mode="after")
     def validate_dates(self):
@@ -199,17 +204,24 @@ class JobCreate(BaseModel):
         if (self.end_date - self.start_date).days > 14:
             raise ValueError("Das Startfenster darf höchstens 14 Tage umfassen")
         self.start_airports = sorted({code.strip().upper() for code in self.start_airports if code.strip()})
+        self.target_airports = sorted({code.strip().upper() for code in self.target_airports if code.strip()})
         if not self.start_airports or any(len(code) != 3 for code in self.start_airports):
             raise ValueError("Flughäfen müssen dreistellige IATA-Codes sein")
+        if any(len(code) != 3 for code in self.target_airports):
+            raise ValueError("Wunschziele müssen dreistellige IATA-Codes sein")
+        if self.search_direction != "any" and not self.target_airports:
+            raise ValueError("Für diese Suchrichtung ist mindestens ein Wunschziel erforderlich")
         return self
 
 
 class RouteQuery(BaseModel):
     job_id: uuid.UUID
     end_airports: list[str] = Field(min_length=1)
+    required_visit_airports: list[str] = Field(default_factory=list)
     min_segments: int = Field(default=2, ge=1, le=5)
     max_segments: int = Field(default=4, ge=1, le=5)
     min_connection_hours: int = Field(default=8, ge=0, le=168)
+    min_target_stay_hours: int = Field(default=0, ge=0, le=336)
     max_airport_transfer_km: float = Field(default=0, ge=0, le=5000)
     max_total_price: float = Field(default=200, gt=0)
     limit: int = Field(default=20, ge=1, le=100)
@@ -239,6 +251,7 @@ def _job_row(row):
         "settings": row[4], "current_depth": row[5], "queries_done": row[6],
         "offers_found": row[7], "error": row[8], "cache_hits": row[9],
         "external_queries": row[10], "elapsed_seconds": round(float(row[11] or 0)),
+        "data_fetched_from": row[12], "data_fetched_to": row[13],
     }
 
 
@@ -351,20 +364,21 @@ def _deserialize_offers(payload: list[dict]) -> list[dict]:
 
 def cached_fetch_offers(
     provider: str, origin: str, date_from: date, date_to: date, max_price: float
-) -> tuple[list[dict], bool]:
+) -> tuple[list[dict], bool, datetime]:
     key = _cache_key(provider, origin, date_from, date_to, max_price)
     with _cache_lock(key):
         with connect() as con, con.cursor() as cur:
             cur.execute("""
-                SELECT offers FROM provider_query_cache
+                SELECT offers,fetched_at FROM provider_query_cache
                 WHERE provider=%s AND origin=%s AND date_from=%s AND date_to=%s AND max_price=%s
                   AND fetched_at >= now() - (%s * interval '1 hour')
             """, (*key, CACHE_TTL_HOURS))
             row = cur.fetchone()
         if row:
-            return _deserialize_offers(row[0]), True
+            return _deserialize_offers(row[0]), True, row[1]
 
         offers = fetch_offers(provider, origin, date_from, date_to, max_price)
+        fetched_at = datetime.now(timezone.utc)
         with connect() as con, con.cursor() as cur:
             cur.execute("""
                 INSERT INTO provider_query_cache(provider,origin,date_from,date_to,max_price,offers,fetched_at)
@@ -372,7 +386,7 @@ def cached_fetch_offers(
                 ON CONFLICT (provider,origin,date_from,date_to,max_price)
                 DO UPDATE SET offers=excluded.offers, fetched_at=now()
             """, (*key, _serialize_offers(offers)))
-        return offers, False
+        return offers, False, fetched_at
 
 
 def _start_worker(job_id: uuid.UUID) -> bool:
@@ -420,6 +434,10 @@ def run_job(job_id: uuid.UUID) -> None:
             """, (job_id,))
 
         last_date = date.fromisoformat(settings["end_date"]) + timedelta(days=settings["max_trip_days"])
+        search_direction = settings.get("search_direction", "any")
+        start_airports = set(settings["start_airports"])
+        target_airports = set(settings.get("target_airports", []))
+        priority_destinations = target_airports | (start_airports if search_direction in ("from_target", "round_trip") else set())
         transfer_neighbors = load_transfer_neighbors(
             settings["provider"], float(settings.get("max_airport_transfer_km", 0))
         )
@@ -453,7 +471,7 @@ def run_job(job_id: uuid.UUID) -> None:
 
             effective_end = min(window_end, last_date)
             try:
-                offers, cache_hit = cached_fetch_offers(
+                offers, cache_hit, source_fetched_at = cached_fetch_offers(
                     settings["provider"], origin, window_start, effective_end,
                     settings["max_price_per_leg"],
                 )
@@ -469,7 +487,16 @@ def run_job(job_id: uuid.UUID) -> None:
                 continue
 
             offers.sort(key=lambda item: item["price"])
-            offers = offers[: settings["max_destinations_per_node"] * max(1, (window_end - window_start).days + 1)]
+            offer_limit = settings["max_destinations_per_node"] * max(1, (window_end - window_start).days + 1)
+            prioritized = [offer for offer in offers if offer["destination"] in priority_destinations]
+            selected_keys = {
+                (offer["origin"], offer["destination"], offer["departure_time"], offer["price"])
+                for offer in prioritized
+            }
+            offers = prioritized + [
+                offer for offer in offers[:offer_limit]
+                if (offer["origin"], offer["destination"], offer["departure_time"], offer["price"]) not in selected_keys
+            ]
 
             with connect() as con, con.cursor() as cur:
                 for offer in offers:
@@ -483,7 +510,12 @@ def run_job(job_id: uuid.UUID) -> None:
                           offer["origin"], offer["destination"], offer["departure_time"], offer["arrival_time"],
                           offer["price"], offer["currency"], offer["booking_url"]))
                     next_start = (offer["arrival_time"] + timedelta(hours=settings["min_connection_hours"])).date()
-                    if next_start <= last_date and depth + 1 < settings["max_depth"]:
+                    reached_final_region = (
+                        search_direction == "to_target" and offer["destination"] in target_airports
+                    ) or (
+                        search_direction == "from_target" and offer["destination"] in start_airports
+                    )
+                    if not reached_final_region and next_start <= last_date and depth + 1 < settings["max_depth"]:
                         next_origins = {offer["destination"]}
                         next_origins.update(transfer_neighbors.get(offer["destination"], {}))
                         for next_origin in next_origins:
@@ -498,8 +530,13 @@ def run_job(job_id: uuid.UUID) -> None:
                       cache_hits=cache_hits+%s,
                       external_queries=external_queries+%s,
                       offers_found=(SELECT count(*) FROM flight_offers WHERE search_job_id=%s),
+                      data_fetched_from=CASE WHEN data_fetched_from IS NULL THEN %s
+                        ELSE LEAST(data_fetched_from,%s) END,
+                      data_fetched_to=CASE WHEN data_fetched_to IS NULL THEN %s
+                        ELSE GREATEST(data_fetched_to,%s) END,
                       updated_at=now() WHERE id=%s
-                """, (depth + 1, 1 if cache_hit else 0, 0 if cache_hit else 1, job_id, job_id))
+                """, (depth + 1, 1 if cache_hit else 0, 0 if cache_hit else 1, job_id,
+                      source_fetched_at, source_fetched_at, source_fetched_at, source_fetched_at, job_id))
     except Exception as exc:
         LOGGER.exception("Suchauftrag %s ist fehlgeschlagen", job_id)
         with connect() as con, con.cursor() as cur:
@@ -568,18 +605,28 @@ def nearby_provider_airports(codes: str, radius_km: float = 150, provider: str =
     return nearby
 
 
-@app.post("/api/jobs", status_code=202)
-def create_job(payload: JobCreate):
+def _create_job_from_settings(settings: dict) -> uuid.UUID:
     job_id = uuid.uuid4()
-    settings = json.loads(payload.model_dump_json())
+    seed_airports = (
+        settings.get("target_airports", [])
+        if settings.get("search_direction") == "from_target"
+        else settings["start_airports"]
+    )
     with connect() as con, con.cursor() as cur:
         cur.execute("INSERT INTO search_jobs(id,status,settings) VALUES (%s,'queued',%s::jsonb)", (job_id, json.dumps(settings)))
-        for airport in settings["start_airports"]:
+        for airport in seed_airports:
             cur.execute("""
                 INSERT INTO search_job_nodes(search_job_id,origin,window_start,window_end,depth)
                 VALUES (%s,%s,%s,%s,0) ON CONFLICT DO NOTHING
             """, (job_id, airport, settings["start_date"], settings["end_date"]))
     start_job_thread(job_id)
+    return job_id
+
+
+@app.post("/api/jobs", status_code=202)
+def create_job(payload: JobCreate):
+    settings = json.loads(payload.model_dump_json())
+    job_id = _create_job_from_settings(settings)
     return {"id": job_id, "status": "queued"}
 
 
@@ -590,10 +637,26 @@ def list_jobs():
             SELECT id,created_at,updated_at,status,settings,current_depth,queries_done,offers_found,error,
               cache_hits,external_queries,
               active_seconds+CASE WHEN status='running' AND run_started_at IS NOT NULL
-                THEN EXTRACT(epoch FROM (now()-run_started_at)) ELSE 0 END AS elapsed_seconds
+                THEN EXTRACT(epoch FROM (now()-run_started_at)) ELSE 0 END AS elapsed_seconds,
+              data_fetched_from,data_fetched_to
             FROM search_jobs ORDER BY created_at DESC LIMIT 50
         """)
         return [_job_row(row) for row in cur.fetchall()]
+
+
+@app.post("/api/jobs/{job_id}/repeat", status_code=202)
+def repeat_job(job_id: uuid.UUID):
+    with connect() as con, con.cursor() as cur:
+        cur.execute("SELECT settings FROM search_jobs WHERE id=%s", (job_id,))
+        row = cur.fetchone()
+    if not row:
+        raise HTTPException(404, "Suchauftrag nicht gefunden")
+    settings = row[0]
+    settings.setdefault("target_airports", [])
+    settings.setdefault("search_direction", "any")
+    settings.setdefault("min_target_stay_hours", 24)
+    new_job_id = _create_job_from_settings(settings)
+    return {"id": new_job_id, "status": "queued", "repeated_from": job_id}
 
 
 @app.post("/api/jobs/{job_id}/pause")
@@ -773,7 +836,12 @@ def find_routes(query: RouteQuery):
                 422,
                 f"Dieser Datensatz wurde nur mit Flughafenwechseln bis {collected_transfer_km:g} km gesammelt",
             )
-        starts = set(settings["start_airports"])
+        search_direction = settings.get("search_direction", "any")
+        starts = set(
+            settings.get("target_airports", [])
+            if search_direction == "from_target"
+            else settings["start_airports"]
+        )
         first_departure_from = date.fromisoformat(settings["start_date"])
         first_departure_to = date.fromisoformat(settings["end_date"])
         max_trip_duration = timedelta(days=settings["max_trip_days"])
@@ -792,12 +860,22 @@ def find_routes(query: RouteQuery):
         by_origin.setdefault(item["origin"], []).append(item)
 
     ends = {code.strip().upper() for code in query.end_airports}
+    required_visits = {code.strip().upper() for code in query.required_visit_airports if code.strip()}
+    if not required_visits and search_direction == "round_trip":
+        required_visits = set(settings.get("target_airports", []))
+    target_stay_hours = query.min_target_stay_hours
+    if required_visits and not target_stay_hours:
+        target_stay_hours = int(settings.get("min_target_stay_hours", 0))
     transfer_neighbors = load_transfer_neighbors(settings["provider"], query.max_airport_transfer_km)
     results: list[dict] = []
 
-    def walk(path: list[dict], airport: str, earliest: datetime | None, total: float, visited: set[str]):
+    def walk(
+        path: list[dict], airport: str, earliest: datetime | None, total: float,
+        visited: set[str], visited_required: set[str], first_target_arrival: datetime | None,
+    ):
         segments = len(path)
-        if segments >= query.min_segments and airport in ends:
+        target_requirement_met = not required_visits or bool(required_visits & visited_required)
+        if segments >= query.min_segments and airport in ends and target_requirement_met:
             trip_seconds = (path[-1]["arrival_time"] - path[0]["departure_time"]).total_seconds()
             flight_seconds = sum(
                 (segment["arrival_time"] - segment["departure_time"]).total_seconds()
@@ -839,13 +917,23 @@ def find_routes(query: RouteQuery):
                         "origin_airport": airport_info(airport),
                         "destination_airport": airport_info(departure_airport),
                     }
+                new_required = visited_required | ({offer["destination"]} & required_visits)
+                target_arrival = first_target_arrival
+                next_earliest = offer["arrival_time"] + timedelta(hours=query.min_connection_hours)
+                if target_arrival is None and offer["destination"] in required_visits:
+                    target_arrival = offer["arrival_time"]
+                    next_earliest = max(
+                        next_earliest,
+                        offer["arrival_time"] + timedelta(hours=target_stay_hours),
+                    )
                 walk(
                     path + [offer], offer["destination"],
-                    offer["arrival_time"] + timedelta(hours=query.min_connection_hours),
-                    new_total, visited | {departure_airport, offer["destination"]},
+                    next_earliest, new_total,
+                    visited | {departure_airport, offer["destination"]},
+                    new_required, target_arrival,
                 )
 
     for start in starts:
-        walk([], start, None, 0.0, {start})
+        walk([], start, None, 0.0, {start}, {start} & required_visits, None)
     results.sort(key=lambda route: (route["total_price"], route["trip_duration_minutes"]))
     return results[: query.limit]

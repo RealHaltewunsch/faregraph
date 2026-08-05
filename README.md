@@ -39,6 +39,9 @@ systems.
 - route search with a configurable minimum stay after arrival
 - ground transfers between airports within a configurable radius
 - automatically add nearby active Ryanair airports as departure airports
+- optional destination region with nearby airports and searches to, from or
+  round-trip through that region
+- price-data timestamps, relative age and one-click recollection of a dataset
 - interactive map for selected routes
 - find common direct destinations from two collected datasets
 - German and English interface
@@ -184,10 +187,15 @@ Open the **Collect data** tab.
 2. Optional: Set the radius to, for example, `150 km` and click
    **Add nearby Ryanair airports**. FareGraph adds active Ryanair airports
    within the radius and displays their distances.
-3. Select the earliest and latest possible departure dates.
-4. Set the trip duration, maximum number of flights and price limit.
-5. Choose **Ryanair live** or use **Demo data** for a safe test.
-6. Click **Start search**.
+3. Optional: Enter one or more desired destination airports. You can expand
+   this region independently with **Add nearby Ryanair airports to destination**.
+4. Select **Anywhere**, **To desired destination**, **Back from desired
+   destination** or **Round trip**. For a round trip, set the minimum stay at
+   the destination; it is calculated from the actual arrival time.
+5. Select the earliest and latest possible departure dates.
+6. Set the trip duration, maximum number of flights and price limit.
+7. Choose **Ryanair live** or use **Demo data** for a safe test.
+8. Click **Start search**.
 
 The job runs in the background. The interface displays the elapsed search time,
 current level, number of requests, cache hits and found offers live.
@@ -198,6 +206,10 @@ current level, number of requests, cache hits and found offers live.
 | --- | --- |
 | Departure airports | Airports from which the initial search starts |
 | Nearby-airport radius | Adds active Ryanair departure airports; it does not change ground transfers within a route |
+| Desired destination airports | Optional target region; each listed airport is accepted as a target |
+| Destination radius | Adds active Ryanair airports around the desired destination |
+| Search direction | Collect anywhere, towards the target, back from it, or there and back |
+| Minimum stay at destination | For round trips, earliest return departure after actual arrival at a target |
 | Earliest/latest departure | Date window for the first flights |
 | Max. trip days | Maximum time from the first departure to the final arrival |
 | Max. flights per connection | Maximum graph depth or number of individual flight segments |
@@ -215,8 +227,9 @@ After a collection job has completed:
 
 1. Open **Find routes**.
 2. Select the collected dataset.
-3. Enter the permitted destination airports. For a round trip, these can be the
-   original departure airports.
+3. Enter the permitted final airports and, when needed, a list of airports of
+   which at least one must be visited. FareGraph prefills these fields for
+   targeted collection jobs.
 4. Set the minimum and maximum number of flights.
 5. Set the minimum stay after arrival and the total budget.
 6. Click **Find cheapest routes**.
@@ -262,7 +275,12 @@ airports by combined price.
 
 - **Pause:** stops the job safely after the current request
 - **Resume:** continues a paused job using its stored queue
+- **Collect again:** starts a fresh collection with the same settings
 - **Delete:** permanently removes the job and all associated flight offers
+
+Each job shows the timestamp of the price data and its relative age. When a
+job contains responses collected at different times, FareGraph shows the full
+time range. Older jobs created before this feature show their creation time.
 
 If the app container restarts during a search, the job is stored as paused and
 can be resumed afterward.
@@ -592,10 +610,16 @@ Die Gesundheitsprüfung sollte eine Antwort mit `"status":"ok"` liefern.
 2. Optional: Stelle den Radius auf beispielsweise `150 km` und klicke auf
    **Nahe Ryanair-Flughäfen hinzufügen**. FareGraph ergänzt aktive
    Ryanair-Flughäfen im Umkreis und zeigt deren Entfernung an.
-3. Wähle das früheste und späteste mögliche Startdatum.
-4. Lege Reisedauer, maximale Zahl der Flüge und Preislimit fest.
-5. Wähle **Ryanair live** oder für einen ungefährlichen Test **Demo-Daten**.
-6. Klicke auf **Suche starten**.
+3. Optional: Trage einen oder mehrere Wunschziel-Flughäfen ein. Mit **Nahe
+   Ryanair-Flughäfen zum Ziel hinzufügen** lässt sich diese Zielregion separat
+   erweitern.
+4. Wähle **Egal wohin**, **Zum Wunschziel**, **Vom Wunschziel zurück** oder
+   **Hin und zurück**. Bei Hin und zurück wird der Mindestaufenthalt am Ziel ab
+   der tatsächlichen Ankunft berechnet.
+5. Wähle das früheste und späteste mögliche Startdatum.
+6. Lege Reisedauer, maximale Zahl der Flüge und Preislimit fest.
+7. Wähle **Ryanair live** oder für einen ungefährlichen Test **Demo-Daten**.
+8. Klicke auf **Suche starten**.
 
 Der Auftrag läuft im Hintergrund. Die Oberfläche zeigt Suchzeit, aktuelle
 Ebene, Zahl der Abfragen, Cache-Treffer und gefundene Angebote live an.
@@ -606,6 +630,10 @@ Ebene, Zahl der Abfragen, Cache-Treffer und gefundene Angebote live an.
 | --- | --- |
 | Startflughäfen | Flughäfen, von denen die erste Suche beginnt |
 | Radius für nahe Flughäfen | Ergänzt weitere aktive Ryanair-Startflughäfen; verändert nicht den Bodenwechsel einer Route |
+| Wunschziel-Flughäfen | Optionale Zielregion; jeder eingetragene Flughafen gilt als passendes Ziel |
+| Zielradius | Ergänzt aktive Ryanair-Flughäfen rund um das Wunschziel |
+| Suchrichtung | Sammelt egal wohin, zum Ziel, vom Ziel zurück oder hin und zurück |
+| Mindestaufenthalt am Wunschziel | Bei Hin und zurück frühester Rückflug ab tatsächlicher Ankunft am Ziel |
 | Frühester/spätester Start | Datumsfenster für die ersten Abflüge |
 | Max. Reisetage | Maximaler Zeitraum vom ersten Abflug bis zur letzten Ankunft |
 | Max. Flüge je Verbindung | Maximale Graphentiefe beziehungsweise Zahl einzelner Flugsegmente |
@@ -623,8 +651,9 @@ Nach Abschluss eines Sammelauftrags:
 
 1. Öffne **Routen finden**.
 2. Wähle den gesammelten Datensatz.
-3. Trage die erlaubten Endflughäfen ein. Für eine Rundreise können dies die
-   ursprünglichen Startflughäfen sein.
+3. Trage die erlaubten Endflughäfen ein und bei Bedarf eine Liste, von der
+   mindestens ein Flughafen besucht werden muss. Bei zielgerichteten
+   Sammelaufträgen füllt FareGraph diese Felder automatisch passend vor.
 4. Lege minimale und maximale Zahl der Flüge fest.
 5. Stelle den Mindestaufenthalt ab Ankunft und das Gesamtbudget ein.
 6. Klicke auf **Günstigste Routen finden**.
@@ -670,7 +699,12 @@ Zielflughäfen nach Gesamtpreis sortiert an.
 
 - **Pausieren:** beendet den Auftrag kontrolliert nach der aktuellen Abfrage
 - **Fortsetzen:** setzt einen pausierten Auftrag mit seiner gespeicherten Warteschlange fort
+- **Neu sammeln:** startet einen frischen Sammelauftrag mit denselben Einstellungen
 - **Löschen:** entfernt den Auftrag und alle zugehörigen Flugangebote dauerhaft
+
+Jeder Auftrag zeigt den Zeitstempel des Preisstands und dessen relatives Alter.
+Wurden Antworten zu unterschiedlichen Zeitpunkten gesammelt, erscheint der
+gesamte Zeitraum. Ältere Aufträge zeigen ersatzweise ihren Erstellzeitpunkt.
 
 Wird der App-Container während einer Suche neu gestartet, wird der Auftrag als
 pausiert gespeichert und kann anschließend fortgesetzt werden.
