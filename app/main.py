@@ -252,6 +252,7 @@ class MeetupQuery(BaseModel):
     max_outbound_segments: int = Field(default=1, ge=1, le=6)
     min_return_segments: int = Field(default=1, ge=1, le=6)
     max_return_segments: int = Field(default=2, ge=1, le=6)
+    max_route_duration_hours: float = Field(default=24, ge=1, le=336)
     max_return_difference_days: int = Field(default=0, ge=0, le=14)
     max_total_price: float = Field(default=300, gt=0, le=5000)
     limit: int = Field(default=30, ge=1, le=100)
@@ -799,7 +800,7 @@ def _local_date(value: datetime, airport: dict) -> date:
 def _outbound_routes(
     offers: list[dict], home_airports: set[str], departure_from: date, departure_to: date,
     min_segments: int, max_segments: int, min_connection_hours: int,
-    max_duration_days: int, max_price: float,
+    max_duration_hours: float, max_price: float,
 ) -> list[dict]:
     by_origin: dict[str, list[dict]] = {}
     for offer in offers:
@@ -808,7 +809,7 @@ def _outbound_routes(
         origin_offers.sort(key=lambda offer: (offer["departure_time"], offer["price"]))
 
     candidates: list[dict] = []
-    max_duration = timedelta(days=max_duration_days)
+    max_duration = timedelta(hours=max_duration_hours)
 
     def walk(path: list[dict], airport: str, earliest: datetime | None, visited: set[str], total: float):
         segments = len(path)
@@ -852,7 +853,7 @@ def _outbound_routes(
 def _return_routes(
     offers: list[dict], destination: str, home_airports: set[str],
     departure_from: date, departure_to: date, min_segments: int, max_segments: int,
-    min_connection_hours: int, max_price: float,
+    min_connection_hours: int, max_duration_hours: float, max_price: float,
 ) -> list[dict]:
     by_origin: dict[str, list[dict]] = {}
     for offer in offers:
@@ -861,6 +862,7 @@ def _return_routes(
         origin_offers.sort(key=lambda offer: (offer["departure_time"], offer["price"]))
 
     candidates: list[dict] = []
+    max_duration = timedelta(hours=max_duration_hours)
 
     def walk(path: list[dict], airport: str, earliest: datetime | None, visited: set[str], total: float):
         segments = len(path)
@@ -877,6 +879,8 @@ def _return_routes(
                 if not departure_from <= local_departure <= departure_to:
                     continue
             elif earliest and offer["departure_time"] < earliest:
+                continue
+            if path and offer["arrival_time"] - path[0]["departure_time"] > max_duration:
                 continue
             if offer["destination"] in visited and offer["destination"] not in home_airports:
                 continue
@@ -927,13 +931,13 @@ def find_common_destinations(query: MeetupQuery):
     outbound_routes_a = _outbound_routes(
         all_offers_a, home_a, query.departure_from, query.departure_to,
         query.min_outbound_segments, query.max_outbound_segments,
-        int(settings_a.get("min_connection_hours", 0)), int(settings_a["max_trip_days"]),
+        int(settings_a.get("min_connection_hours", 0)), query.max_route_duration_hours,
         query.max_total_price,
     )
     outbound_routes_b = _outbound_routes(
         all_offers_b, home_b, query.departure_from, query.departure_to,
         query.min_outbound_segments, query.max_outbound_segments,
-        int(settings_b.get("min_connection_hours", 0)), int(settings_b["max_trip_days"]),
+        int(settings_b.get("min_connection_hours", 0)), query.max_route_duration_hours,
         query.max_total_price,
     )
     b_by_destination: dict[str, list[dict]] = {}
@@ -969,12 +973,17 @@ def find_common_destinations(query: MeetupQuery):
             return_to = shared_arrival_date + timedelta(days=query.max_stay_days)
 
             def returns_for(label: str, all_offers: list[dict], homes: set[str], settings: dict):
-                key = (label, destination, return_from, return_to, query.min_return_segments, query.max_return_segments)
+                key = (
+                    label, destination, return_from, return_to,
+                    query.min_return_segments, query.max_return_segments,
+                    query.max_route_duration_hours,
+                )
                 if key not in return_cache:
                     return_cache[key] = _return_routes(
                         all_offers, destination, homes, return_from, return_to,
                         query.min_return_segments, query.max_return_segments,
                         int(settings.get("min_connection_hours", 0)),
+                        query.max_route_duration_hours,
                         query.max_total_price,
                     )
                 return return_cache[key]
