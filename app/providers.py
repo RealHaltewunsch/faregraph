@@ -142,28 +142,32 @@ def _matches_ryanair_timetable(offer: dict[str, Any]) -> bool:
 
 
 def fetch_ryanair(origin: str, date_from: date, date_to: date, max_price: float) -> list[dict[str, Any]]:
-    params = {
-        "departureAirportIataCode": origin.upper(),
-        "outboundDepartureDateFrom": date_from.isoformat(),
-        "outboundDepartureDateTo": date_to.isoformat(),
-        "currency": "EUR",
-        "language": "de",
-        "market": "de-de",
-        "offset": 0,
-    }
     offers: list[dict[str, Any]] = []
     with httpx.Client(timeout=30, follow_redirects=True, headers={"User-Agent": "FareGraph/0.1"}) as client:
-        for _ in range(10):
-            response = _get_with_retry(client, RYANAIR_FARES, params=params)
-            payload = response.json()
-            rows = payload.get("fares", [])
-            for row in rows:
-                parsed = _parse_ryanair_fare(row)
-                if parsed and parsed["price"] <= max_price and _matches_ryanair_timetable(parsed):
-                    offers.append(parsed)
-            if not payload.get("nextPage") or not rows:
-                break
-            params["offset"] = int(params["offset"]) + len(rows)
+        chunk_from = date_from
+        while chunk_from <= date_to:
+            chunk_to = min(chunk_from + timedelta(days=30), date_to)
+            params = {
+                "departureAirportIataCode": origin.upper(),
+                "outboundDepartureDateFrom": chunk_from.isoformat(),
+                "outboundDepartureDateTo": chunk_to.isoformat(),
+                "currency": "EUR",
+                "language": "de",
+                "market": "de-de",
+                "offset": 0,
+            }
+            for _ in range(10):
+                response = _get_with_retry(client, RYANAIR_FARES, params=params)
+                payload = response.json()
+                rows = payload.get("fares", [])
+                for row in rows:
+                    parsed = _parse_ryanair_fare(row)
+                    if parsed and parsed["price"] <= max_price and _matches_ryanair_timetable(parsed):
+                        offers.append(parsed)
+                if not payload.get("nextPage") or not rows:
+                    break
+                params["offset"] = int(params["offset"]) + len(rows)
+            chunk_from = chunk_to + timedelta(days=1)
     return offers
 
 

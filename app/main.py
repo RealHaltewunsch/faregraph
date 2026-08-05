@@ -202,8 +202,8 @@ class JobCreate(BaseModel):
     def validate_dates(self):
         if self.end_date < self.start_date:
             raise ValueError("Enddatum muss nach dem Startdatum liegen")
-        if (self.end_date - self.start_date).days > 31:
-            raise ValueError("Das Startfenster darf höchstens 31 Tage umfassen")
+        if (self.end_date - self.start_date).days > 92:
+            raise ValueError("Das Startfenster darf höchstens 92 Tage umfassen")
         if self.min_trip_days > self.max_trip_days:
             raise ValueError("Min. Reisetage darf Max. Reisetage nicht überschreiten")
         self.start_airports = sorted({code.strip().upper() for code in self.start_airports if code.strip()})
@@ -218,7 +218,8 @@ class JobCreate(BaseModel):
 
 
 class RouteQuery(BaseModel):
-    job_id: uuid.UUID
+    job_id: uuid.UUID | None = None
+    job_ids: list[uuid.UUID] = Field(default_factory=list, max_length=12)
     end_airports: list[str] = Field(min_length=1)
     required_visit_airports: list[str] = Field(default_factory=list)
     min_segments: int = Field(default=2, ge=1, le=6)
@@ -228,6 +229,14 @@ class RouteQuery(BaseModel):
     max_airport_transfer_km: float = Field(default=0, ge=0, le=5000)
     max_total_price: float = Field(default=200, gt=0)
     limit: int = Field(default=20, ge=1, le=100)
+
+    @model_validator(mode="after")
+    def validate_jobs(self):
+        selected = self.job_ids or ([self.job_id] if self.job_id else [])
+        self.job_ids = list(dict.fromkeys(selected))
+        if not self.job_ids:
+            raise ValueError("Mindestens ein Datensatz muss ausgewählt werden")
+        return self
 
 
 class MeetupQuery(BaseModel):
@@ -932,32 +941,55 @@ def find_common_destinations(query: MeetupQuery):
 def find_routes(query: RouteQuery):
     if query.min_segments > query.max_segments:
         raise HTTPException(422, "min_segments darf max_segments nicht überschreiten")
+    job_ids = query.job_ids
     with connect() as con, con.cursor() as cur:
-        cur.execute("SELECT settings FROM search_jobs WHERE id=%s", (query.job_id,))
-        job = cur.fetchone()
-        if not job:
-            raise HTTPException(404, "Suchauftrag nicht gefunden")
-        settings = job[0]
-        collected_transfer_km = float(settings.get("max_airport_transfer_km", 0))
+        cur.execute("SELECT id,settings,status FROM search_jobs WHERE id = ANY(%s)", (job_ids,))
+        jobs_by_id = {row[0]: {"settings": row[1], "status": row[2]} for row in cur.fetchall()}
+        if len(jobs_by_id) != len(job_ids):
+            raise HTTPException(404, "Mindestens ein Suchauftrag wurde nicht gefunden")
+        if any(jobs_by_id[job_id]["status"] != "completed" for job_id in job_ids):
+            raise HTTPException(409, "Alle ausgewählten Datensätze müssen abgeschlossen sein")
+        settings_list = [jobs_by_id[job_id]["settings"] for job_id in job_ids]
+        providers = {settings["provider"] for settings in settings_list}
+        if len(providers) != 1:
+            raise HTTPException(422, "Kombinierte Datensätze müssen dieselbe Datenquelle verwenden")
+        collected_transfer_km = min(
+            float(settings.get("max_airport_transfer_km", 0)) for settings in settings_list
+        )
         if query.max_airport_transfer_km > collected_transfer_km:
             raise HTTPException(
                 422,
-                f"Dieser Datensatz wurde nur mit Flughafenwechseln bis {collected_transfer_km:g} km gesammelt",
+                f"Die ausgewählten Datensätze wurden nur mit Flughafenwechseln bis {collected_transfer_km:g} km gesammelt",
             )
-        search_direction = settings.get("search_direction", "any")
-        starts = set(
-            settings.get("target_airports", [])
-            if search_direction == "from_target"
-            else settings["start_airports"]
-        )
-        first_departure_from = date.fromisoformat(settings["start_date"])
-        first_departure_to = date.fromisoformat(settings["end_date"])
-        min_trip_duration = timedelta(days=settings.get("min_trip_days", 0))
-        max_trip_duration = timedelta(days=settings["max_trip_days"])
+        starts: set[str] = set()
+        first_departure_windows: list[tuple[date, date]] = []
+        round_trip_targets: set[str] = set()
+        for settings in settings_list:
+            search_direction = settings.get("search_direction", "any")
+            starts.update(
+                settings.get("target_airports", [])
+                if search_direction == "from_target"
+                else settings["start_airports"]
+            )
+            first_departure_windows.append((
+                date.fromisoformat(settings["start_date"]),
+                date.fromisoformat(settings["end_date"]),
+            ))
+            if search_direction == "round_trip":
+                round_trip_targets.update(settings.get("target_airports", []))
+        min_trip_days = max(int(settings.get("min_trip_days", 0)) for settings in settings_list)
+        max_trip_days = min(int(settings["max_trip_days"]) for settings in settings_list)
+        if min_trip_days > max_trip_days:
+            raise HTTPException(422, "Die Reisedauer-Einstellungen der Datensätze überschneiden sich nicht")
+        min_trip_duration = timedelta(days=min_trip_days)
+        max_trip_duration = timedelta(days=max_trip_days)
         cur.execute("""
-            SELECT id,airline,flight_number,origin,destination,departure_time,arrival_time,price,currency,booking_url
-            FROM flight_offers WHERE search_job_id=%s ORDER BY departure_time
-        """, (query.job_id,))
+            SELECT DISTINCT ON (provider,airline,flight_number,origin,destination,departure_time,arrival_time)
+              id,airline,flight_number,origin,destination,departure_time,arrival_time,
+              price,currency,booking_url
+            FROM flight_offers WHERE search_job_id = ANY(%s)
+            ORDER BY provider,airline,flight_number,origin,destination,departure_time,arrival_time,fetched_at DESC
+        """, (job_ids,))
         rows = cur.fetchall()
 
     by_origin: dict[str, list[dict]] = {}
@@ -967,15 +999,17 @@ def find_routes(query: RouteQuery):
                 "price": float(row[7]), "currency": row[8].strip(), "booking_url": row[9],
                 "origin_airport": airport_info(row[3]), "destination_airport": airport_info(row[4])}
         by_origin.setdefault(item["origin"], []).append(item)
+    for origin_offers in by_origin.values():
+        origin_offers.sort(key=lambda offer: (offer["departure_time"], offer["price"]))
 
     ends = {code.strip().upper() for code in query.end_airports}
     required_visits = {code.strip().upper() for code in query.required_visit_airports if code.strip()}
-    if not required_visits and search_direction == "round_trip":
-        required_visits = set(settings.get("target_airports", []))
+    if not required_visits:
+        required_visits = round_trip_targets
     target_stay_hours = query.min_target_stay_hours
     if required_visits and not target_stay_hours:
-        target_stay_hours = int(settings.get("min_target_stay_hours", 0))
-    transfer_neighbors = load_transfer_neighbors(settings["provider"], query.max_airport_transfer_km)
+        target_stay_hours = max(int(settings.get("min_target_stay_hours", 0)) for settings in settings_list)
+    transfer_neighbors = load_transfer_neighbors(next(iter(providers)), query.max_airport_transfer_km)
     results: list[dict] = []
 
     def walk(
@@ -1008,7 +1042,11 @@ def find_routes(query: RouteQuery):
                 continue
             for stored_offer in by_origin.get(departure_airport, []):
                 offer = stored_offer.copy()
-                if not path and not (first_departure_from <= offer["departure_time"].date() <= first_departure_to):
+                departure_date = offer["departure_time"].date()
+                if not path and not any(
+                    departure_from <= departure_date <= departure_to
+                    for departure_from, departure_to in first_departure_windows
+                ):
                     continue
                 if earliest and offer["departure_time"] < earliest:
                     continue

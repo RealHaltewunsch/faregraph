@@ -211,7 +211,7 @@ current level, number of requests, cache hits and found offers live.
 | Destination radius | Adds active Ryanair airports around the desired destination |
 | Search type | Collect flexibly anywhere, one-way to a target, or there and back |
 | Minimum stay at destination | For round trips, earliest return departure after actual arrival at a target |
-| Earliest/latest departure | Date window for the first flights, up to 31 days |
+| Earliest/latest departure | Date window for the first flights, up to 92 days (about three months) |
 | Min./max. trip days | Shortest and longest permitted time from the first departure to the final arrival |
 | Max. flights per connection | Maximum graph depth or number of individual flight segments |
 | Earliest onward departure after arrival | Earliest permitted next flight, calculated from the actual arrival time |
@@ -220,14 +220,19 @@ current level, number of requests, cache hits and found offers live.
 
 A large depth, many departure airports and a wide date window can significantly
 increase the number of airline requests. Start with one to three departure
-airports and a depth of two or three.
+airports and a depth of two or three. FareGraph splits long Ryanair date
+windows into smaller request windows internally so a three-month collection is
+not truncated by one oversized provider response.
 
 #### 2. Find routes
 
 After a collection job has completed:
 
 1. Open **Find routes**.
-2. Select the collected dataset.
+2. Select one or more collected datasets. FareGraph combines their flights for
+   this query without copying the datasets. Selecting adjacent periods allows,
+   for example, a departure on 30 September from one dataset and a return on
+   3 October from another.
 3. Enter the permitted final airports and, when needed, a list of airports of
    which at least one must be visited. FareGraph prefills these fields for
    targeted collection jobs.
@@ -640,7 +645,7 @@ Ebene, Zahl der Abfragen, Cache-Treffer und gefundene Angebote live an.
 | Zielradius | Ergänzt aktive Ryanair-Flughäfen rund um das Wunschziel |
 | Suchart | Sammelt flexibel egal wohin, als einfache Hinreise oder hin und zurück |
 | Mindestaufenthalt am Wunschziel | Bei Hin und zurück frühester Rückflug ab tatsächlicher Ankunft am Ziel |
-| Frühester/spätester Start | Datumsfenster für die ersten Abflüge, maximal 31 Tage |
+| Frühester/spätester Start | Datumsfenster für die ersten Abflüge, maximal 92 Tage (etwa drei Monate) |
 | Min./max. Reisetage | Kürzester und längster erlaubter Zeitraum vom ersten Abflug bis zur letzten Ankunft |
 | Max. Flüge je Verbindung | Maximale Graphentiefe beziehungsweise Zahl einzelner Flugsegmente |
 | Früheste Weiterreise ab Ankunft | Frühester erlaubter Folgeflug, gerechnet ab der tatsächlichen Ankunft |
@@ -649,14 +654,19 @@ Ebene, Zahl der Abfragen, Cache-Treffer und gefundene Angebote live an.
 
 Eine große Suchtiefe, viele Startflughäfen und ein großes Datumsfenster können
 die Zahl der Airline-Abfragen stark erhöhen. Für den Einstieg sind ein bis drei
-Startflughäfen und eine Tiefe von zwei oder drei sinnvoll.
+Startflughäfen und eine Tiefe von zwei oder drei sinnvoll. FareGraph teilt lange
+Ryanair-Zeiträume intern in kleinere Abfragefenster, damit eine dreimonatige
+Sammlung nicht durch eine einzelne zu große Anbieterantwort abgeschnitten wird.
 
 ### 2. Routen finden
 
 Nach Abschluss eines Sammelauftrags:
 
 1. Öffne **Routen finden**.
-2. Wähle den gesammelten Datensatz.
+2. Wähle einen oder mehrere gesammelte Datensätze. FareGraph kombiniert deren
+   Flüge für diese Abfrage, ohne die Datensätze zu kopieren. Mit angrenzenden
+   Zeiträumen kann eine Route beispielsweise am 30. September aus einem
+   Datensatz starten und am 3. Oktober über einen anderen zurückkehren.
 3. Trage die erlaubten Endflughäfen ein und bei Bedarf eine Liste, von der
    mindestens ein Flughafen besucht werden muss. Bei zielgerichteten
    Sammelaufträgen füllt FareGraph diese Felder automatisch passend vor.
