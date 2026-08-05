@@ -1,0 +1,88 @@
+const I18N = {
+  de: {
+    tagline: 'Finde günstige Rundreisen mit mehreren Stopps – flexibel nach Datum, Aufenthalt und Budget.',
+    collectTab: 'Daten sammeln', routesTab: 'Routen finden', meetupTab: 'Gemeinsames Ziel',
+    newSearch: 'Neue Suche', startAirports: 'Startflughäfen (Komma getrennt)', nearbyRadius: 'Radius (km)', addNearby: 'Nahe Ryanair-Flughäfen hinzufügen', nearbyHint: 'Ergänzt aktive Ryanair-Flughäfen im gewählten Radius.', earliestStart: 'Frühester Start', latestStart: 'Spätester Start',
+    maxTripDays: 'Max. Reisetage', maxFlights: 'Max. Flüge je Verbindung', earliestContinuation: 'Früheste Weiterreise ab Ankunft (h)',
+    maxPriceFlight: 'Max. Preis je Flug (€)', maxGroundDistance: 'Max. Entfernung zwischen Bodenflughäfen (km)', dataSource: 'Datenquelle',
+    ryanairLive: 'Ryanair live', demoData: 'Demo-Daten (zum Testen)', startSearch: 'Suche starten', howItWorks: 'So funktioniert es',
+    how1: 'FareGraph fragt zunächst alle Ziele deiner Startflughäfen ab. Von jedem gefundenen Ziel wächst der Suchgraph bis zur gewählten Tiefe weiter.',
+    how2: 'Die Daten bleiben in deiner lokalen Datenbank und können anschließend beliebig oft neu kombiniert werden.',
+    noticeLabel: 'Hinweis:', noticeText: 'Live-Endpunkte von Airlines können sich ändern oder Anfragen begrenzen. Beginne mit kleiner Tiefe.',
+    searchJobs: 'Suchaufträge', noJobs: 'Noch keine Suchaufträge.', routeCalculate: 'Route berechnen', collectedDataset: 'Gesammelter Datensatz',
+    allowedDestinations: 'Erlaubte Zielflughäfen', minFlightsRoute: 'Min. Flüge in der Route', maxFlightsRoute: 'Max. Flüge in der Route',
+    minStay: 'Mindestaufenthalt ab Ankunft (h)', groundAirports: 'Bodenflughäfen bis (km)', maxTotalPrice: 'Max. Gesamtpreis (€)',
+    findCheapestRoutes: 'Günstigste Routen finden', results: 'Ergebnisse', chooseCompleted: 'Wähle einen abgeschlossenen Suchauftrag.',
+    routeMap: 'Routenkarte', commonDestination: 'Gemeinsames Ziel finden', datasetA: 'Datensatz A', datasetB: 'Datensatz B',
+    departEarliest: 'Abflug frühestens', departLatest: 'Abflug spätestens', maxArrivalDifference: 'Max. Ankunftsdifferenz (h)',
+    maxPriceTogether: 'Max. Preis zusammen (€)', directFlightsCompared: 'Verglichen werden Direktflüge von den Startflughäfen beider Datensätze.',
+    findCommon: 'Gemeinsame Ziele finden', commonResults: 'Gemeinsame Ziele', chooseTwo: 'Wähle zwei abgeschlossene Suchaufträge.',
+    helpTripDays: 'Begrenzt den Zeitraum vom ersten Abflug bis zur letzten Ankunft.',
+    helpMaxFlights: 'Begrenzt die Zahl einzelner Flüge. 2 kann A → B → C oder A → B → A sein; es bedeutet nicht automatisch Hin- und Rückflug.',
+    helpContinuation: 'So viele Stunden nach der tatsächlichen Ankunft sucht der Sammler frühestens nach dem nächsten Flug.',
+    helpGroundCollect: '0 deaktiviert Flughafenwechsel. Ein positiver Wert erlaubt die Weiterreise ab einem anderen Ryanair-Flughafen innerhalb dieses Radius.',
+    helpMinFlights: 'Eine Route wird nur angezeigt, wenn sie mindestens so viele einzelne Flüge enthält.',
+    helpMaxRouteFlights: 'Obergrenze der einzelnen Flüge einer gefundenen Route; kein automatisches Hin-und-Rückflug-Schema.',
+    helpMinStay: 'Zeit zwischen der tatsächlichen Ankunft und dem frühestmöglichen nächsten Abflug.',
+    helpGroundRoutes: 'Erlaubt einen Wechsel zu einem nahen Flughafen. Der Wert darf nicht größer sein als beim Sammeln.',
+    helpArrivalDifference: 'Beide Gruppen müssen am gemeinsamen Ziel innerhalb dieser Zeitspanne ankommen.',
+    queued: 'wartet', running: 'läuft', paused: 'pausiert', completed: 'abgeschlossen', failed: 'fehlgeschlagen', cancelled: 'abgebrochen',
+    pause: 'Pausieren', resume: 'Fortsetzen', delete: 'Löschen', searchTime: 'Suchzeit', offers: 'Angebote', queries: 'Abfragen', cache: 'Cache', level: 'Ebene',
+    flights: 'Flüge', maxShort: 'max.', groundAirportsShort: 'Bodenflughäfen bis', calculating: 'Berechne …', noRoute: 'Keine passende Route gefunden.',
+    departure: 'Abflug', arrival: 'Ankunft', tripDuration: 'Reisedauer', flightDuration: 'Flugzeit', day: 'Tag', days: 'Tage', hourShort: 'Std.', minuteShort: 'Min.', showMap: 'Auf Karte zeigen', groundTransfer: 'Bodenwechsel',
+    mapLoadError: 'Die Kartenbibliothek konnte nicht geladen werden.', firstCollect: 'Zuerst Daten sammeln', actionFailed: 'Aktion fehlgeschlagen:',
+    pausing: 'Suchauftrag wird pausiert', resuming: 'Suchauftrag wird fortgesetzt', deleteConfirm: 'Diesen Suchauftrag und alle zugehörigen Flugdaten endgültig löschen?',
+    deleteFailed: 'Löschen fehlgeschlagen:', deleted: 'Suchauftrag und Flugdaten gelöscht', jobStarted: 'Suchauftrag gestartet', error: 'Fehler:',
+    compareDestinations: 'Vergleiche Ziele …', collectTwoFirst: 'Bitte zuerst zwei abgeschlossene Suchaufträge sammeln.',
+    arrivalDifference: 'Ankunftsdifferenz', hours: 'Stunden', noCommon: 'Keine gemeinsamen Direktziele mit diesen Bedingungen gefunden.',
+    datasetContains: 'Dieser Datensatz enthält Flughafenwechsel bis', enterAirportFirst: 'Bitte zuerst einen Startflughafen eingeben.', loadingNearby: 'Suche nahe Ryanair-Flughäfen …', nearbyAdded: 'Hinzugefügt:', noNearbyAdded: 'Keine weiteren Ryanair-Flughäfen in diesem Radius gefunden.', nearbyFailed: 'Nahe Flughäfen konnten nicht geladen werden.', languageGerman: 'Deutsch', languageEnglish: 'English'
+  },
+  en: {
+    tagline: 'Find affordable multi-stop trips – flexible by date, stay and budget.',
+    collectTab: 'Collect data', routesTab: 'Find routes', meetupTab: 'Common destination',
+    newSearch: 'New search', startAirports: 'Departure airports (comma-separated)', nearbyRadius: 'Radius (km)', addNearby: 'Add nearby Ryanair airports', nearbyHint: 'Adds active Ryanair airports within the selected radius.', earliestStart: 'Earliest departure', latestStart: 'Latest departure',
+    maxTripDays: 'Max. trip days', maxFlights: 'Max. flights per connection', earliestContinuation: 'Earliest onward departure after arrival (h)',
+    maxPriceFlight: 'Max. price per flight (€)', maxGroundDistance: 'Max. distance between ground airports (km)', dataSource: 'Data source',
+    ryanairLive: 'Ryanair live', demoData: 'Demo data (for testing)', startSearch: 'Start search', howItWorks: 'How it works',
+    how1: 'FareGraph first checks every destination from your departure airports. The search graph then expands from each destination to the selected depth.',
+    how2: 'The data remains in your local database and can be recombined as often as you like.',
+    noticeLabel: 'Note:', noticeText: 'Live airline endpoints can change or rate-limit requests. Start with a small search depth.',
+    searchJobs: 'Search jobs', noJobs: 'No search jobs yet.', routeCalculate: 'Calculate route', collectedDataset: 'Collected dataset',
+    allowedDestinations: 'Allowed destination airports', minFlightsRoute: 'Min. flights in route', maxFlightsRoute: 'Max. flights in route',
+    minStay: 'Minimum stay after arrival (h)', groundAirports: 'Ground airports within (km)', maxTotalPrice: 'Max. total price (€)',
+    findCheapestRoutes: 'Find cheapest routes', results: 'Results', chooseCompleted: 'Select a completed search job.',
+    routeMap: 'Route map', commonDestination: 'Find a common destination', datasetA: 'Dataset A', datasetB: 'Dataset B',
+    departEarliest: 'Earliest departure', departLatest: 'Latest departure', maxArrivalDifference: 'Max. arrival difference (h)',
+    maxPriceTogether: 'Max. combined price (€)', directFlightsCompared: 'Direct flights from the departure airports in both datasets are compared.',
+    findCommon: 'Find common destinations', commonResults: 'Common destinations', chooseTwo: 'Select two completed search jobs.',
+    helpTripDays: 'Limits the period from the first departure to the final arrival.',
+    helpMaxFlights: 'Limits the number of individual flights. 2 can mean A → B → C or A → B → A; it does not automatically mean a return trip.',
+    helpContinuation: 'The collector searches for the next flight no earlier than this many hours after the actual arrival.',
+    helpGroundCollect: '0 disables airport changes. A positive value allows onward travel from another Ryanair airport within this radius.',
+    helpMinFlights: 'A route is only shown when it contains at least this many individual flights.',
+    helpMaxRouteFlights: 'Maximum number of individual flights in a route; this does not automatically create a return trip.',
+    helpMinStay: 'Time between the actual arrival and the earliest permitted next departure.',
+    helpGroundRoutes: 'Allows a transfer to a nearby airport. The value cannot exceed the radius used when collecting.',
+    helpArrivalDifference: 'Both groups must arrive at the common destination within this time window.',
+    queued: 'queued', running: 'running', paused: 'paused', completed: 'completed', failed: 'failed', cancelled: 'cancelled',
+    pause: 'Pause', resume: 'Resume', delete: 'Delete', searchTime: 'Search time', offers: 'offers', queries: 'queries', cache: 'cache', level: 'level',
+    flights: 'flights', maxShort: 'max.', groundAirportsShort: 'ground airports within', calculating: 'Calculating …', noRoute: 'No matching route found.',
+    departure: 'Departure', arrival: 'Arrival', tripDuration: 'Trip duration', flightDuration: 'Flight time', day: 'day', days: 'days', hourShort: 'h', minuteShort: 'min', showMap: 'Show on map', groundTransfer: 'Ground transfer',
+    mapLoadError: 'The map library could not be loaded.', firstCollect: 'Collect data first', actionFailed: 'Action failed:',
+    pausing: 'Search job is being paused', resuming: 'Search job is being resumed', deleteConfirm: 'Permanently delete this search job and all associated flight data?',
+    deleteFailed: 'Deletion failed:', deleted: 'Search job and flight data deleted', jobStarted: 'Search job started', error: 'Error:',
+    compareDestinations: 'Comparing destinations …', collectTwoFirst: 'Please collect two completed search jobs first.',
+    arrivalDifference: 'Arrival difference', hours: 'hours', noCommon: 'No common direct destinations match these conditions.',
+    datasetContains: 'This dataset contains airport changes up to', enterAirportFirst: 'Enter a departure airport first.', loadingNearby: 'Finding nearby Ryanair airports …', nearbyAdded: 'Added:', noNearbyAdded: 'No additional Ryanair airports found within this radius.', nearbyFailed: 'Nearby airports could not be loaded.', languageGerman: 'German', languageEnglish: 'English'
+  }
+};
+
+let currentLanguage = localStorage.getItem('faregraph-language') === 'en' ? 'en' : 'de';
+function t(key){return I18N[currentLanguage][key] || I18N.de[key] || key}
+function applyTranslations(){
+  document.documentElement.lang=currentLanguage;
+  document.querySelectorAll('[data-i18n]').forEach(el=>el.textContent=t(el.dataset.i18n));
+  document.querySelectorAll('[data-i18n-tip]').forEach(el=>el.dataset.tip=t(el.dataset.i18nTip));
+  document.querySelectorAll('.language-switcher button').forEach(btn=>btn.classList.toggle('selected-language',btn.dataset.lang===currentLanguage));
+}
+function setLanguage(language){localStorage.setItem('faregraph-language',language);location.reload()}
