@@ -1,5 +1,413 @@
 # FareGraph
 
+[English](#english) · [Deutsch](#deutsch)
+
+<a id="english"></a>
+## English
+
+FareGraph finds affordable round trips and multi-leg flight routes that
+traditional flight search engines often cannot combine usefully. Instead of
+only searching for `A → B → A`, FareGraph collects available one-way flights
+and connects them as a time-dependent graph.
+
+Examples:
+
+- `CGN → PMI → STN → BGY → NRN`
+- depart from Cologne and return through another nearby airport
+- find the cheapest possible route with two to five flight segments
+- let two groups of friends depart from different places and find a common destination
+- continue from a nearby airport, for example `NRN ⇢ EIN`
+
+FareGraph runs entirely as a Docker application with a web interface and a
+PostgreSQL database. It was designed for Unraid but also works on other Docker
+systems.
+
+> [!IMPORTANT]
+> Ryanair access uses public but unofficial and undocumented web endpoints.
+> These endpoints can change or rate-limit requests. FareGraph is not affiliated
+> with Ryanair or any other airline. Always verify prices, flight times and
+> availability on the airline's website before booking.
+
+### Features
+
+- on-demand collection instead of permanent crawling
+- Ryanair as the default live data source
+- PostgreSQL storage for all search jobs and offers
+- configurable date window, price limit and maximum search depth
+- correct local departure and arrival times
+- separate display of total trip duration and actual flight time
+- route search with a configurable minimum stay after arrival
+- ground transfers between airports within a configurable radius
+- automatically add nearby active Ryanair airports as departure airports
+- interactive map for selected routes
+- find common direct destinations from two collected datasets
+- German and English interface
+- live display of search time, requests, cache hits and found offers
+- pause, resume and permanently delete search jobs
+- cache for identical airline requests
+- support for `Retry-After`, exponential retries and optional throttling
+- demo data source for safe functional testing
+
+### Requirements
+
+- Docker Engine with Docker Compose v2
+- approximately 1 GB of free memory
+- sufficient storage for PostgreSQL; actual usage depends on the number and
+  depth of search jobs
+- internet access from the container for Ryanair requests and map tiles
+
+On Unraid, a share such as `appdata` is recommended for persistent PostgreSQL
+data.
+
+### Quick start with Docker
+
+#### 1. Download the project
+
+```bash
+git clone https://github.com/RealHaltewunsch/faregraph.git
+cd faregraph
+```
+
+Alternatively, download the repository as a ZIP file from GitHub and extract it.
+
+#### 2. Create the configuration
+
+```bash
+cp .env.example .env
+```
+
+Open `.env` and replace `change-me` in both of the following lines with the
+same secure password:
+
+```dotenv
+POSTGRES_PASSWORD=a-long-random-password
+DATABASE_URL=postgresql://faregraph:a-long-random-password@db:5432/faregraph
+```
+
+Important: Special characters in `DATABASE_URL` must be URL-encoded. A long
+password consisting of letters and numbers is easiest to configure correctly.
+
+By default, database data is stored in `./data/postgres`. Change this line to
+use another directory:
+
+```dotenv
+POSTGRES_DATA_PATH=./data/postgres
+```
+
+#### 3. Start FareGraph
+
+```bash
+docker compose up -d --build
+```
+
+On the first start, Docker builds the app image, downloads PostgreSQL and
+creates the database tables automatically.
+
+#### 4. Open the web interface
+
+```text
+http://SERVER-IP:8787
+```
+
+On the same computer, this is normally:
+
+```text
+http://localhost:8787
+```
+
+The port can be changed in `.env`:
+
+```dotenv
+APP_PORT=8787
+```
+
+### Installation on Unraid
+
+The simplest installation uses the Unraid terminal and Docker Compose.
+
+#### 1. Create the project directory and clone the repository
+
+```bash
+mkdir -p /mnt/user/appdata/faregraph
+cd /mnt/user/appdata/faregraph
+git clone https://github.com/RealHaltewunsch/faregraph.git src
+cd src
+```
+
+If `git` is unavailable on the server, download the GitHub ZIP file, copy it to
+`/mnt/user/appdata/faregraph/src` through an Unraid share and extract it there.
+
+#### 2. Create the Unraid configuration
+
+```bash
+cp .env.example .env
+```
+
+At minimum, change the password and storage path in `.env`:
+
+```dotenv
+POSTGRES_PASSWORD=a-long-random-password
+DATABASE_URL=postgresql://faregraph:a-long-random-password@db:5432/faregraph
+POSTGRES_DATA_PATH=/mnt/user/appdata/faregraph/postgres
+APP_PORT=8787
+```
+
+#### 3. Start the containers
+
+```bash
+docker compose up -d --build
+```
+
+FareGraph is then available at:
+
+```text
+http://UNRAID-IP:8787
+```
+
+#### 4. Check the installation
+
+```bash
+docker compose ps
+curl http://127.0.0.1:8787/health
+```
+
+The health endpoint should return a response containing `"status":"ok"`.
+
+### Using FareGraph
+
+#### 1. Collect data
+
+Open the **Collect data** tab.
+
+1. Enter one or more departure airports as IATA codes, for example `NRN` or
+   `CGN,DUS,NRN`.
+2. Optional: Set the radius to, for example, `150 km` and click
+   **Add nearby Ryanair airports**. FareGraph adds active Ryanair airports
+   within the radius and displays their distances.
+3. Select the earliest and latest possible departure dates.
+4. Set the trip duration, maximum number of flights and price limit.
+5. Choose **Ryanair live** or use **Demo data** for a safe test.
+6. Click **Start search**.
+
+The job runs in the background. The interface displays the elapsed search time,
+current level, number of requests, cache hits and found offers live.
+
+##### Collection parameters
+
+| Setting | Meaning |
+| --- | --- |
+| Departure airports | Airports from which the initial search starts |
+| Nearby-airport radius | Adds active Ryanair departure airports; it does not change ground transfers within a route |
+| Earliest/latest departure | Date window for the first flights |
+| Max. trip days | Maximum time from the first departure to the final arrival |
+| Max. flights per connection | Maximum graph depth or number of individual flight segments |
+| Earliest onward departure after arrival | Earliest permitted next flight, calculated from the actual arrival time |
+| Max. price per flight | More expensive individual offers are not stored |
+| Max. distance between ground airports | Allows onward searches from another airport within this radius; `0` disables it |
+
+A large depth, many departure airports and a wide date window can significantly
+increase the number of airline requests. Start with one to three departure
+airports and a depth of two or three.
+
+#### 2. Find routes
+
+After a collection job has completed:
+
+1. Open **Find routes**.
+2. Select the collected dataset.
+3. Enter the permitted destination airports. For a round trip, these can be the
+   original departure airports.
+4. Set the minimum and maximum number of flights.
+5. Set the minimum stay after arrival and the total budget.
+6. Click **Find cheapest routes**.
+
+`Max. flights = 2` does not automatically mean a return trip. It permits two
+individual segments, so it can produce either `A → B → A` or `A → B → C` when
+the final airport is permitted.
+
+Each result displays these values separately:
+
+- **Trip duration:** time from the first departure to the final arrival, including stays
+- **Flight time:** sum of the actual flight time of every segment
+
+Click **Show on map** to display only the selected route on the map.
+
+#### 3. Ground transfers between airports
+
+During collection, you can permit transfers between airports within a maximum
+distance. For example, after arriving at `NRN`, a route may continue from `EIN`
+when the configured radius is large enough.
+
+- `0 km`: no airport transfer
+- `100 km`: transfer to Ryanair airports within 100 km
+- the radius used for route finding cannot exceed the radius used for collection
+- ground transfers are displayed separately and do not count as flight segments
+- ground-transfer time and cost are not calculated automatically yet
+
+#### 4. Find a common destination
+
+For two groups departing from different regions:
+
+1. Collect one dataset for departure region A.
+2. Collect another dataset for departure region B.
+3. Open **Common destination**.
+4. Select both datasets, the departure window, maximum arrival difference and
+   combined budget.
+5. Click **Find common destinations**.
+
+FareGraph compares direct flights in both datasets and sorts common destination
+airports by combined price.
+
+### Managing search jobs
+
+- **Pause:** stops the job safely after the current request
+- **Resume:** continues a paused job using its stored queue
+- **Delete:** permanently removes the job and all associated flight offers
+
+If the app container restarts during a search, the job is stored as paused and
+can be resumed afterward.
+
+### Configuration
+
+All configuration values are stored in `.env`:
+
+| Variable | Default | Description |
+| --- | ---: | --- |
+| `APP_PORT` | `8787` | Web interface port on the Docker host |
+| `POSTGRES_DB` | `faregraph` | Database name |
+| `POSTGRES_USER` | `faregraph` | Database user |
+| `POSTGRES_PASSWORD` | `change-me` | Database password; always change this |
+| `DATABASE_URL` | – | App connection to the database; the password must match |
+| `POSTGRES_DATA_PATH` | `./data/postgres` | Persistent storage location for PostgreSQL data |
+| `CACHE_TTL_HOURS` | `6` | Cache lifetime for identical fare requests |
+| `AIRPORT_CATALOG_TTL_DAYS` | `7` | Cache lifetime for the Ryanair airport catalogue |
+| `RYANAIR_MIN_DELAY` | `0` | Optional minimum delay between Ryanair requests |
+| `RYANAIR_MAX_DELAY` | `0` | Optional maximum delay between Ryanair requests |
+
+The fixed delay is disabled by default. FareGraph still respects `Retry-After`
+for HTTP `429` responses. Temporary network and server errors are retried with
+exponential backoff.
+
+### Updating
+
+Run these commands inside the project directory:
+
+```bash
+git pull
+docker compose up -d --build
+```
+
+PostgreSQL data remains intact as long as `POSTGRES_DATA_PATH` is not deleted or
+changed.
+
+### Stopping and restarting
+
+```bash
+docker compose stop
+docker compose start
+```
+
+Remove the containers while keeping the data:
+
+```bash
+docker compose down
+```
+
+> [!CAUTION]
+> `docker compose down -v` or deleting `POSTGRES_DATA_PATH` removes stored
+> search jobs and flight data.
+
+### Backup
+
+For a file-based backup, stop FareGraph briefly and back up the directory
+configured as `POSTGRES_DATA_PATH`. Alternatively, create a PostgreSQL dump:
+
+```bash
+docker compose exec -T db pg_dump -U faregraph faregraph > faregraph-backup.sql
+```
+
+### Troubleshooting
+
+#### The web interface is unavailable
+
+```bash
+docker compose ps
+docker compose logs --tail=100 app
+docker compose logs --tail=100 db
+```
+
+Also check whether another container is already using `APP_PORT`.
+
+#### The database does not start
+
+Make sure the directory configured as `POSTGRES_DATA_PATH` exists and is
+writable by Docker. `POSTGRES_PASSWORD` and the password inside `DATABASE_URL`
+must be identical.
+
+#### Ryanair rate-limits or resets requests
+
+FareGraph waits according to the response from the data source and retries
+temporary failures. A stopped job can be resumed through the web interface.
+Split very large searches into smaller date windows or lower search depths.
+
+#### Times or prices differ
+
+FareGraph validates Ryanair offers against the timetable and displays times in
+the local timezone of each airport. Airline data may still change at short
+notice. The airline's booking page is always authoritative.
+
+### Public access
+
+FareGraph currently has no user accounts and should not be exposed directly to
+the internet without additional access protection. Use a reverse proxy with
+HTTPS and authentication, or access FareGraph through a private VPN.
+
+The [`proxy`](proxy/) directory contains the Nginx structure used by the
+original Unraid installation as an example. It contains installation-specific
+IP addresses that must be adapted. The corresponding Compose service uses the
+`public-proxy` profile and is not started by a normal `docker compose up -d`.
+
+### Current limitations
+
+- Ryanair is currently the only live source; Wizz Air, easyJet and Eurowings are planned
+- unofficial airline data is not guaranteed to be complete
+- no automatic booking
+- no automatic calculation of train, bus or taxi time for ground transfers
+- no ground-transfer costs
+- common destinations currently compare direct flights
+- no integrated login or user management
+
+### Privacy and security
+
+- FareGraph stores search settings and found flight data in the local database.
+- It does not require personal travel data or payment information.
+- Never commit `.env`, database files, certificates or password files to Git.
+- Run the interface inside a home network, behind a VPN or behind a protected reverse proxy.
+
+### Project structure
+
+```text
+faregraph/
+├── app/                  FastAPI backend, search and data sources
+├── static/               Web interface and translations
+├── proxy/                installation-specific reverse-proxy example
+├── .env.example          documented example configuration
+├── docker-compose.yml    app, PostgreSQL and optional proxy
+├── Dockerfile            application container image
+└── requirements.txt      Python dependencies
+```
+
+### Legal notice
+
+Use this software at your own risk. Operators are responsible for checking the
+terms of the data sources they use and all applicable laws and regulations.
+FareGraph is an independent project and not an official airline application.
+
+---
+
+<a id="deutsch"></a>
+## Deutsch
+
 FareGraph findet günstige Rundreisen und mehrteilige Flugrouten, die klassische
 Flugsuchmaschinen oft nicht sinnvoll zusammensetzen. Statt nur nach
 `A → B → A` zu suchen, sammelt FareGraph verfügbare Einzelflüge und verbindet
