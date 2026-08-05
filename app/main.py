@@ -279,6 +279,7 @@ def _job_row(row):
         "offers_found": row[7], "error": row[8], "cache_hits": row[9],
         "external_queries": row[10], "elapsed_seconds": round(float(row[11] or 0)),
         "data_fetched_from": row[12], "data_fetched_to": row[13],
+        "skipped_queries": row[14],
     }
 
 
@@ -665,7 +666,9 @@ def list_jobs():
               cache_hits,external_queries,
               active_seconds+CASE WHEN status='running' AND run_started_at IS NOT NULL
                 THEN EXTRACT(epoch FROM (now()-run_started_at)) ELSE 0 END AS elapsed_seconds,
-              data_fetched_from,data_fetched_to
+              data_fetched_from,data_fetched_to,
+              (SELECT count(*) FROM search_job_nodes node
+                WHERE node.search_job_id=search_jobs.id AND node.status='skipped') AS skipped_queries
             FROM search_jobs ORDER BY created_at DESC LIMIT 50
         """)
         return [_job_row(row) for row in cur.fetchall()]
@@ -718,6 +721,33 @@ def resume_job(job_id: uuid.UUID):
             raise HTTPException(409, "Nur pausierte Suchaufträge können fortgesetzt werden")
     start_job_thread(job_id)
     return {"status": "queued"}
+
+
+@app.post("/api/jobs/{job_id}/retry-skipped", status_code=202)
+def retry_skipped_queries(job_id: uuid.UUID):
+    with ACTIVE_WORKERS_LOCK:
+        if job_id in ACTIVE_WORKERS:
+            raise HTTPException(409, "Der Suchauftrag läuft noch; bitte kurz warten")
+    with connect() as con, con.transaction(), con.cursor() as cur:
+        cur.execute("SELECT status FROM search_jobs WHERE id=%s FOR UPDATE", (job_id,))
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(404, "Suchauftrag nicht gefunden")
+        if row[0] != "completed":
+            raise HTTPException(409, "Fehlende Abfragen können erst nach Abschluss nachgeholt werden")
+        cur.execute("""
+            UPDATE search_job_nodes SET status='queued', error=NULL, updated_at=now()
+            WHERE search_job_id=%s AND status='skipped'
+        """, (job_id,))
+        retry_count = cur.rowcount
+        if not retry_count:
+            raise HTTPException(409, "Dieser Suchauftrag enthält keine fehlenden Abfragen")
+        cur.execute("""
+            UPDATE search_jobs SET status='queued', error=NULL, updated_at=now()
+            WHERE id=%s
+        """, (job_id,))
+    start_job_thread(job_id)
+    return {"status": "queued", "retrying_queries": retry_count}
 
 
 @app.post("/api/jobs/{job_id}/cancel")

@@ -291,6 +291,8 @@ stay beyond the permitted difference.
 
 - **Pause:** stops the job safely after the current request
 - **Resume:** continues a paused job using its stored queue
+- **Retry missing:** reruns only provider queries that remained unavailable
+  after all automatic retries; existing offers and completed queries are kept
 - **Collect again:** starts a fresh collection with the same settings
 - **Delete:** permanently removes the job and all associated flight offers
 
@@ -732,6 +734,9 @@ nicht unbemerkt verlängert.
 
 - **Pausieren:** beendet den Auftrag kontrolliert nach der aktuellen Abfrage
 - **Fortsetzen:** setzt einen pausierten Auftrag mit seiner gespeicherten Warteschlange fort
+- **Fehlende nachholen:** wiederholt ausschließlich Abfragen, die auch nach den
+  automatischen Versuchen nicht erreichbar waren; vorhandene Angebote und
+  abgeschlossene Abfragen bleiben erhalten
 - **Neu sammeln:** startet einen frischen Sammelauftrag mit denselben Einstellungen
 - **Löschen:** entfernt den Auftrag und alle zugehörigen Flugangebote dauerhaft
 
