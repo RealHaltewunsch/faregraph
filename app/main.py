@@ -201,8 +201,8 @@ class JobCreate(BaseModel):
     def validate_dates(self):
         if self.end_date < self.start_date:
             raise ValueError("Enddatum muss nach dem Startdatum liegen")
-        if (self.end_date - self.start_date).days > 14:
-            raise ValueError("Das Startfenster darf höchstens 14 Tage umfassen")
+        if (self.end_date - self.start_date).days > 31:
+            raise ValueError("Das Startfenster darf höchstens 31 Tage umfassen")
         self.start_airports = sorted({code.strip().upper() for code in self.start_airports if code.strip()})
         self.target_airports = sorted({code.strip().upper() for code in self.target_airports if code.strip()})
         if not self.start_airports or any(len(code) != 3 for code in self.start_airports):

@@ -211,7 +211,7 @@ current level, number of requests, cache hits and found offers live.
 | Destination radius | Adds active Ryanair airports around the desired destination |
 | Search type | Collect flexibly anywhere, one-way to a target, or there and back |
 | Minimum stay at destination | For round trips, earliest return departure after actual arrival at a target |
-| Earliest/latest departure | Date window for the first flights |
+| Earliest/latest departure | Date window for the first flights, up to 31 days |
 | Max. trip days | Maximum time from the first departure to the final arrival |
 | Max. flights per connection | Maximum graph depth or number of individual flight segments |
 | Earliest onward departure after arrival | Earliest permitted next flight, calculated from the actual arrival time |
@@ -636,7 +636,7 @@ Ebene, Zahl der Abfragen, Cache-Treffer und gefundene Angebote live an.
 | Zielradius | Ergänzt aktive Ryanair-Flughäfen rund um das Wunschziel |
 | Suchart | Sammelt flexibel egal wohin, als einfache Hinreise oder hin und zurück |
 | Mindestaufenthalt am Wunschziel | Bei Hin und zurück frühester Rückflug ab tatsächlicher Ankunft am Ziel |
-| Frühester/spätester Start | Datumsfenster für die ersten Abflüge |
+| Frühester/spätester Start | Datumsfenster für die ersten Abflüge, maximal 31 Tage |
 | Max. Reisetage | Maximaler Zeitraum vom ersten Abflug bis zur letzten Ankunft |
 | Max. Flüge je Verbindung | Maximale Graphentiefe beziehungsweise Zahl einzelner Flugsegmente |
 | Früheste Weiterreise ab Ankunft | Frühester erlaubter Folgeflug, gerechnet ab der tatsächlichen Ankunft |
