@@ -265,12 +265,16 @@ For two groups departing from different regions:
 1. Collect one dataset for departure region A.
 2. Collect another dataset for departure region B.
 3. Open **Common destination**.
-4. Select both datasets, the departure window, maximum arrival difference and
-   combined budget.
-5. Click **Find common destinations**.
+4. Select both datasets and the outbound departure window.
+5. Set the minimum and maximum stay in calendar days, the permitted number of
+   flights in each return route, the maximum arrival difference and the total
+   budget for both round trips.
+6. Click **Find common destinations**.
 
-FareGraph compares direct flights in both datasets and sorts common destination
-airports by combined price.
+FareGraph combines a direct outbound flight for each group with a return route
+to that group's departure region. The stay is counted from the calendar date
+on which both groups have arrived. Results include all outbound and return
+segments and are sorted by the total price for both groups.
 
 ### Managing search jobs
 
@@ -690,12 +694,16 @@ Für zwei Gruppen, die von unterschiedlichen Regionen starten:
 1. Sammle einen Datensatz für Startregion A.
 2. Sammle einen zweiten Datensatz für Startregion B.
 3. Öffne **Gemeinsames Ziel**.
-4. Wähle beide Datensätze, das Abflugfenster, die maximale Ankunftsdifferenz
-   und das gemeinsame Budget.
-5. Klicke auf **Gemeinsame Ziele finden**.
+4. Wähle beide Datensätze und das Abflugfenster für die Hinflüge.
+5. Lege minimalen und maximalen Aufenthalt in Kalendertagen, die erlaubte Zahl
+   der Flüge je Rückroute, die maximale Ankunftsdifferenz und das Gesamtbudget
+   für beide Rundreisen fest.
+6. Klicke auf **Gemeinsame Ziele finden**.
 
-FareGraph vergleicht die Direktflüge beider Datensätze und zeigt gemeinsame
-Zielflughäfen nach Gesamtpreis sortiert an.
+FareGraph kombiniert für jede Gruppe einen direkten Hinflug mit einer
+Rückroute in ihre Startregion. Der Aufenthalt zählt ab dem Kalendertag, an dem
+beide Gruppen angekommen sind. Die Ergebnisse enthalten alle Hin- und
+Rückflugsegmente und sind nach dem Gesamtpreis beider Gruppen sortiert.
 
 ## Suchaufträge verwalten
 
