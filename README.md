@@ -212,7 +212,7 @@ current level, number of requests, cache hits and found offers live.
 | Search type | Collect flexibly anywhere, one-way to a target, or there and back |
 | Minimum stay at destination | For round trips, earliest return departure after actual arrival at a target |
 | Earliest/latest departure | Date window for the first flights, up to 31 days |
-| Max. trip days | Maximum time from the first departure to the final arrival |
+| Min./max. trip days | Shortest and longest permitted time from the first departure to the final arrival |
 | Max. flights per connection | Maximum graph depth or number of individual flight segments |
 | Earliest onward departure after arrival | Earliest permitted next flight, calculated from the actual arrival time |
 | Max. price per flight | More expensive individual offers are not stored |
@@ -637,7 +637,7 @@ Ebene, Zahl der Abfragen, Cache-Treffer und gefundene Angebote live an.
 | Suchart | Sammelt flexibel egal wohin, als einfache Hinreise oder hin und zurück |
 | Mindestaufenthalt am Wunschziel | Bei Hin und zurück frühester Rückflug ab tatsächlicher Ankunft am Ziel |
 | Frühester/spätester Start | Datumsfenster für die ersten Abflüge, maximal 31 Tage |
-| Max. Reisetage | Maximaler Zeitraum vom ersten Abflug bis zur letzten Ankunft |
+| Min./max. Reisetage | Kürzester und längster erlaubter Zeitraum vom ersten Abflug bis zur letzten Ankunft |
 | Max. Flüge je Verbindung | Maximale Graphentiefe beziehungsweise Zahl einzelner Flugsegmente |
 | Früheste Weiterreise ab Ankunft | Frühester erlaubter Folgeflug, gerechnet ab der tatsächlichen Ankunft |
 | Max. Preis je Flug | Einzelne teurere Flugangebote werden nicht gespeichert |

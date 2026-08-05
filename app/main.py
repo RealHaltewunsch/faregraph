@@ -189,6 +189,7 @@ class JobCreate(BaseModel):
     min_target_stay_hours: int = Field(default=24, ge=0, le=336)
     start_date: date
     end_date: date
+    min_trip_days: int = Field(default=1, ge=1, le=14)
     max_trip_days: int = Field(default=5, ge=1, le=14)
     max_depth: int = Field(default=3, ge=1, le=5)
     min_connection_hours: int = Field(default=0, ge=0, le=168)
@@ -203,6 +204,8 @@ class JobCreate(BaseModel):
             raise ValueError("Enddatum muss nach dem Startdatum liegen")
         if (self.end_date - self.start_date).days > 31:
             raise ValueError("Das Startfenster darf höchstens 31 Tage umfassen")
+        if self.min_trip_days > self.max_trip_days:
+            raise ValueError("Min. Reisetage darf Max. Reisetage nicht überschreiten")
         self.start_airports = sorted({code.strip().upper() for code in self.start_airports if code.strip()})
         self.target_airports = sorted({code.strip().upper() for code in self.target_airports if code.strip()})
         if not self.start_airports or any(len(code) != 3 for code in self.start_airports):
@@ -655,6 +658,7 @@ def repeat_job(job_id: uuid.UUID):
     settings.setdefault("target_airports", [])
     settings.setdefault("search_direction", "any")
     settings.setdefault("min_target_stay_hours", 24)
+    settings.setdefault("min_trip_days", 1)
     new_job_id = _create_job_from_settings(settings)
     return {"id": new_job_id, "status": "queued", "repeated_from": job_id}
 
@@ -844,6 +848,7 @@ def find_routes(query: RouteQuery):
         )
         first_departure_from = date.fromisoformat(settings["start_date"])
         first_departure_to = date.fromisoformat(settings["end_date"])
+        min_trip_duration = timedelta(days=settings.get("min_trip_days", 0))
         max_trip_duration = timedelta(days=settings["max_trip_days"])
         cur.execute("""
             SELECT id,airline,flight_number,origin,destination,departure_time,arrival_time,price,currency,booking_url
@@ -875,7 +880,8 @@ def find_routes(query: RouteQuery):
     ):
         segments = len(path)
         target_requirement_met = not required_visits or bool(required_visits & visited_required)
-        if segments >= query.min_segments and airport in ends and target_requirement_met:
+        trip_duration = path[-1]["arrival_time"] - path[0]["departure_time"] if path else timedelta(0)
+        if segments >= query.min_segments and airport in ends and target_requirement_met and trip_duration >= min_trip_duration:
             trip_seconds = (path[-1]["arrival_time"] - path[0]["departure_time"]).total_seconds()
             flight_seconds = sum(
                 (segment["arrival_time"] - segment["departure_time"]).total_seconds()
