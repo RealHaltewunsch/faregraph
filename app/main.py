@@ -25,7 +25,7 @@ from .providers import fetch_offers, fetch_provider_airports
 
 
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://faregraph:faregraph-local@localhost:5432/faregraph")
-CACHE_TTL_HOURS = max(1, int(os.getenv("CACHE_TTL_HOURS", "6")))
+CACHE_TTL_HOURS = max(1, int(os.getenv("CACHE_TTL_HOURS", "3")))
 AIRPORT_CATALOG_TTL_DAYS = max(1, int(os.getenv("AIRPORT_CATALOG_TTL_DAYS", "7")))
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 
@@ -35,8 +35,7 @@ AIRPORTS = airportsdata.load("IATA")
 LOGGER = logging.getLogger("faregraph")
 ACTIVE_WORKERS: set[uuid.UUID] = set()
 ACTIVE_WORKERS_LOCK = threading.Lock()
-CACHE_KEY_LOCKS: dict[tuple, threading.Lock] = {}
-CACHE_KEY_LOCKS_LOCK = threading.Lock()
+PROVIDER_QUERY_LOCK = threading.Lock()
 PROVIDER_CATALOG_LOCKS: dict[str, threading.Lock] = {}
 PROVIDER_CATALOG_LOCKS_LOCK = threading.Lock()
 
@@ -298,11 +297,6 @@ def _cache_key(provider: str, origin: str, date_from: date, date_to: date, max_p
     return provider, origin, date_from, date_to, round(max_price, 2)
 
 
-def _cache_lock(key: tuple) -> threading.Lock:
-    with CACHE_KEY_LOCKS_LOCK:
-        return CACHE_KEY_LOCKS.setdefault(key, threading.Lock())
-
-
 def _catalog_lock(provider: str) -> threading.Lock:
     with PROVIDER_CATALOG_LOCKS_LOCK:
         return PROVIDER_CATALOG_LOCKS.setdefault(provider, threading.Lock())
@@ -390,20 +384,41 @@ def _deserialize_offers(payload: list[dict]) -> list[dict]:
     return offers
 
 
+def _filter_cached_offers(
+    offers: list[dict], origin: str, date_from: date, date_to: date, max_price: float
+) -> list[dict]:
+    timezone_name = airport_info(origin).get("timezone") or "UTC"
+    try:
+        origin_timezone = ZoneInfo(timezone_name)
+    except (KeyError, ValueError):
+        origin_timezone = timezone.utc
+    return [
+        offer for offer in offers
+        if offer["price"] <= max_price
+        and date_from <= offer["departure_time"].astimezone(origin_timezone).date() <= date_to
+    ]
+
+
 def cached_fetch_offers(
     provider: str, origin: str, date_from: date, date_to: date, max_price: float
 ) -> tuple[list[dict], bool, datetime]:
     key = _cache_key(provider, origin, date_from, date_to, max_price)
-    with _cache_lock(key):
+    # Every search job shares this queue. Waiting jobs recheck the cache after
+    # acquiring it, so identical or covered requests are never fetched twice.
+    with PROVIDER_QUERY_LOCK:
         with connect() as con, con.cursor() as cur:
             cur.execute("""
                 SELECT offers,fetched_at FROM provider_query_cache
-                WHERE provider=%s AND origin=%s AND date_from=%s AND date_to=%s AND max_price=%s
+                WHERE provider=%s AND origin=%s AND date_from<=%s AND date_to>=%s AND max_price>=%s
                   AND fetched_at >= now() - (%s * interval '1 hour')
-            """, (*key, CACHE_TTL_HOURS))
+                ORDER BY (date_to-date_from),max_price,fetched_at DESC LIMIT 1
+            """, (provider, origin, date_from, date_to, round(max_price, 2), CACHE_TTL_HOURS))
             row = cur.fetchone()
         if row:
-            return _deserialize_offers(row[0]), True, row[1]
+            offers = _filter_cached_offers(
+                _deserialize_offers(row[0]), origin, date_from, date_to, max_price
+            )
+            return offers, True, row[1]
 
         offers = fetch_offers(provider, origin, date_from, date_to, max_price)
         fetched_at = datetime.now(timezone.utc)

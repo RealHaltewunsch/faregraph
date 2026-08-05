@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://faregraph:faregraph-local@db:5432/faregraph}
-      CACHE_TTL_HOURS: ${CACHE_TTL_HOURS:-6}
+      CACHE_TTL_HOURS: ${CACHE_TTL_HOURS:-3}
       AIRPORT_CATALOG_TTL_DAYS: ${AIRPORT_CATALOG_TTL_DAYS:-7}
       RYANAIR_MIN_DELAY: ${RYANAIR_MIN_DELAY:-0}
       RYANAIR_MAX_DELAY: ${RYANAIR_MAX_DELAY:-0}

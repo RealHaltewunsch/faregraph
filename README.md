@@ -47,7 +47,7 @@ systems.
 - German and English interface
 - live display of search time, requests, cache hits and found offers
 - pause, resume and permanently delete search jobs
-- cache for identical airline requests
+- global provider-query queue with a three-hour cache shared by all search jobs
 - support for `Retry-After`, exponential retries and optional throttling
 - demo data source for safe functional testing
 
@@ -315,14 +315,16 @@ All configuration values are stored in `.env`:
 | `POSTGRES_PASSWORD` | `change-me` | Database password; always change this |
 | `DATABASE_URL` | – | App connection to the database; the password must match |
 | `POSTGRES_DATA_PATH` | `./data/postgres` | Persistent storage location for PostgreSQL data |
-| `CACHE_TTL_HOURS` | `6` | Cache lifetime for identical fare requests |
+| `CACHE_TTL_HOURS` | `3` | Cache lifetime for reusable fare requests shared by all search jobs |
 | `AIRPORT_CATALOG_TTL_DAYS` | `7` | Cache lifetime for the Ryanair airport catalogue |
 | `RYANAIR_MIN_DELAY` | `0` | Optional minimum delay between Ryanair requests |
 | `RYANAIR_MAX_DELAY` | `0` | Optional maximum delay between Ryanair requests |
 
 The fixed delay is disabled by default. FareGraph still respects `Retry-After`
 for HTTP `429` responses. Temporary network and server errors are retried with
-exponential backoff.
+exponential backoff. All search jobs use one global provider-query queue. Before
+an external request starts, FareGraph checks whether a response no older than
+three hours already covers the requested airport, date range and price limit.
 
 ### Updating
 
@@ -759,14 +761,17 @@ Alle Einstellungen liegen in `.env`:
 | `POSTGRES_PASSWORD` | `change-me` | Datenbankpasswort; unbedingt ändern |
 | `DATABASE_URL` | – | Verbindung der App zur Datenbank; Passwort muss übereinstimmen |
 | `POSTGRES_DATA_PATH` | `./data/postgres` | dauerhafter Speicherort der PostgreSQL-Daten |
-| `CACHE_TTL_HOURS` | `6` | Lebensdauer identischer Preisabfragen im Cache |
+| `CACHE_TTL_HOURS` | `3` | Lebensdauer wiederverwendbarer Preisabfragen für alle Suchaufträge |
 | `AIRPORT_CATALOG_TTL_DAYS` | `7` | Lebensdauer des Ryanair-Flughafenkatalogs |
 | `RYANAIR_MIN_DELAY` | `0` | optionale minimale Pause zwischen Ryanair-Anfragen |
 | `RYANAIR_MAX_DELAY` | `0` | optionale maximale Pause zwischen Ryanair-Anfragen |
 
 Die feste Pause ist standardmäßig deaktiviert. Bei HTTP `429` berücksichtigt
 FareGraph weiterhin `Retry-After`. Vorübergehende Netzwerk- und Serverfehler
-werden mit exponentieller Wartezeit erneut versucht.
+werden mit exponentieller Wartezeit erneut versucht. Alle Suchaufträge teilen
+sich eine globale Warteschlange für Provider-Abfragen. Vor jedem externen Abruf
+prüft FareGraph, ob eine höchstens drei Stunden alte Antwort den gewünschten
+Flughafen, Zeitraum und die Preisgrenze bereits abdeckt.
 
 ## Aktualisieren
 
