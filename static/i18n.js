@@ -14,7 +14,7 @@ const I18N = {
     minStay: 'Mindestaufenthalt ab Ankunft (h)', groundAirports: 'Bodenflughäfen bis (km)', maxTotalPrice: 'Max. Gesamtpreis (€)',
     findCheapestRoutes: 'Günstigste Routen finden', results: 'Ergebnisse', chooseCompleted: 'Wähle einen abgeschlossenen Suchauftrag.',
     routeMap: 'Routenkarte', commonDestination: 'Gemeinsames Ziel finden', datasetA: 'Datensatz A', datasetB: 'Datensatz B',
-    departEarliest: 'Abflug frühestens', departLatest: 'Abflug spätestens', minDestinationDays: 'Min. Aufenthalt am Ziel (Kalendertage)', maxDestinationDays: 'Max. Aufenthalt am Ziel (Kalendertage)', minReturnFlights: 'Min. Flüge je Rückroute', maxReturnFlights: 'Max. Flüge je Rückroute', maxArrivalDifference: 'Max. Ankunftsdifferenz (h)',
+    departEarliest: 'Abflug frühestens', departLatest: 'Abflug spätestens', minDestinationDays: 'Min. Aufenthalt am Ziel (Kalendertage)', maxDestinationDays: 'Max. Aufenthalt am Ziel (Kalendertage)', minReturnFlights: 'Min. Flüge je Rückroute', maxReturnFlights: 'Max. Flüge je Rückroute', maxArrivalDifference: 'Max. Ankunftsdifferenz (h)', maxReturnDifference: 'Max. Unterschied beim Rückflug (Kalendertage)',
     maxPriceTogether: 'Max. Gesamtpreis für beide Rundreisen (€)', directFlightsCompared: 'Verglichen werden direkte Hinflüge und passende Rückrouten für beide Gruppen.',
     findCommon: 'Gemeinsame Ziele finden', commonResults: 'Gemeinsame Ziele', chooseTwo: 'Wähle zwei abgeschlossene Suchaufträge.',
     helpMinTripDays: 'Kürzere Routen werden beim Routenfinden nicht angezeigt. Gemessen wird vom ersten Abflug bis zur letzten Ankunft.',
@@ -28,6 +28,7 @@ const I18N = {
     helpMinStay: 'Zeit zwischen der tatsächlichen Ankunft und dem frühestmöglichen nächsten Abflug.',
     helpGroundRoutes: 'Erlaubt einen Wechsel zu einem nahen Flughafen. Der Wert darf nicht größer sein als beim Sammeln.',
     helpArrivalDifference: 'Beide Gruppen müssen am gemeinsamen Ziel innerhalb dieser Zeitspanne ankommen.',
+    helpReturnDifference: '0 bedeutet, dass beide Gruppen am selben Kalendertag zurückfliegen. Ein höherer Wert erlaubt entsprechend viele Tage Unterschied.',
     helpDestinationDays: 'Kalendertage ab dem Tag, an dem beide Gruppen am gemeinsamen Ziel angekommen sind.',
     helpReturnFlights: 'Zahl der Flugsegmente vom gemeinsamen Ziel zurück zu einem Startflughafen der jeweiligen Gruppe.',
     queued: 'wartet', running: 'läuft', paused: 'pausiert', completed: 'abgeschlossen', failed: 'fehlgeschlagen', cancelled: 'abgebrochen',
@@ -38,7 +39,7 @@ const I18N = {
     pausing: 'Suchauftrag wird pausiert', resuming: 'Suchauftrag wird fortgesetzt', deleteConfirm: 'Diesen Suchauftrag und alle zugehörigen Flugdaten endgültig löschen?',
     deleteFailed: 'Löschen fehlgeschlagen:', deleted: 'Suchauftrag und Flugdaten gelöscht', jobStarted: 'Suchauftrag gestartet', jobRepeated: 'Neuer Suchauftrag mit gleichen Einstellungen gestartet', invalidDateRange: 'Der späteste Start darf nicht vor dem frühesten Start liegen.', dateRangeTooLong: 'Das Startfenster darf höchstens 92 Tage (etwa drei Monate) umfassen.', invalidTripDays: 'Min. Reisetage darf Max. Reisetage nicht überschreiten.', error: 'Fehler:',
     compareDestinations: 'Vergleiche Ziele …', collectTwoFirst: 'Bitte zuerst zwei abgeschlossene Suchaufträge sammeln.',
-    arrivalDifference: 'Ankunftsdifferenz', returnWindow: 'Rückflugfenster', outboundFlight: 'Hinflug', returnRoute: 'Rückroute', travelerTotal: 'Summe:', calendarDays: 'Kalendertage', hours: 'Stunden', noCommon: 'Keine gemeinsamen Direktziele mit diesen Bedingungen gefunden.', noCommonRoundTrips: 'Keine gemeinsamen Ziele mit passenden Rückrouten gefunden.', invalidDestinationDays: 'Der minimale Aufenthalt darf den maximalen Aufenthalt nicht überschreiten.', invalidReturnFlights: 'Min. Flüge je Rückroute darf Max. Flüge je Rückroute nicht überschreiten.',
+    arrivalDifference: 'Ankunftsdifferenz', returnDifference: 'Rückflug-Differenz', returnWindow: 'Rückflugfenster', outboundFlight: 'Hinflug', returnRoute: 'Rückroute', travelerTotal: 'Summe:', calendarDays: 'Kalendertage', hours: 'Stunden', noCommon: 'Keine gemeinsamen Direktziele mit diesen Bedingungen gefunden.', noCommonRoundTrips: 'Keine gemeinsamen Ziele mit passenden Rückrouten gefunden.', invalidDestinationDays: 'Der minimale Aufenthalt darf den maximalen Aufenthalt nicht überschreiten.', invalidReturnFlights: 'Min. Flüge je Rückroute darf Max. Flüge je Rückroute nicht überschreiten.',
     datasetContains: 'Die ausgewählten Datensätze erlauben Flughafenwechsel bis', createdAt: 'Erstellt:', priceData: 'Preisstand:', noPriceData: 'noch kein Preisstand', minutesAgo: 'Min. alt', hoursAgo: 'Std. alt', daysAgo: 'Tage alt', enterAirportFirst: 'Bitte zuerst einen Startflughafen eingeben.', enterTargetFirst: 'Bitte zuerst ein Wunschziel eingeben.', loadingNearby: 'Suche nahe Ryanair-Flughäfen …', nearbyAdded: 'Hinzugefügt:', noNearbyAdded: 'Keine weiteren Ryanair-Flughäfen in diesem Radius gefunden.', nearbyFailed: 'Nahe Flughäfen konnten nicht geladen werden.', languageGerman: 'Deutsch', languageEnglish: 'English'
   },
   en: {
@@ -56,7 +57,7 @@ const I18N = {
     minStay: 'Minimum stay after arrival (h)', groundAirports: 'Ground airports within (km)', maxTotalPrice: 'Max. total price (€)',
     findCheapestRoutes: 'Find cheapest routes', results: 'Results', chooseCompleted: 'Select a completed search job.',
     routeMap: 'Route map', commonDestination: 'Find a common destination', datasetA: 'Dataset A', datasetB: 'Dataset B',
-    departEarliest: 'Earliest departure', departLatest: 'Latest departure', minDestinationDays: 'Min. stay at destination (calendar days)', maxDestinationDays: 'Max. stay at destination (calendar days)', minReturnFlights: 'Min. flights per return route', maxReturnFlights: 'Max. flights per return route', maxArrivalDifference: 'Max. arrival difference (h)',
+    departEarliest: 'Earliest departure', departLatest: 'Latest departure', minDestinationDays: 'Min. stay at destination (calendar days)', maxDestinationDays: 'Max. stay at destination (calendar days)', minReturnFlights: 'Min. flights per return route', maxReturnFlights: 'Max. flights per return route', maxArrivalDifference: 'Max. arrival difference (h)', maxReturnDifference: 'Max. return-flight difference (calendar days)',
     maxPriceTogether: 'Max. total price for both round trips (€)', directFlightsCompared: 'Direct outbound flights and matching return routes are compared for both groups.',
     findCommon: 'Find common destinations', commonResults: 'Common destinations', chooseTwo: 'Select two completed search jobs.',
     helpMinTripDays: 'Shorter routes are omitted when finding routes. Duration is measured from the first departure to the final arrival.',
@@ -70,6 +71,7 @@ const I18N = {
     helpMinStay: 'Time between the actual arrival and the earliest permitted next departure.',
     helpGroundRoutes: 'Allows a transfer to a nearby airport. The value cannot exceed the radius used when collecting.',
     helpArrivalDifference: 'Both groups must arrive at the common destination within this time window.',
+    helpReturnDifference: '0 means both groups must depart on their return flights on the same calendar day. A higher value permits that many days of difference.',
     helpDestinationDays: 'Calendar days from the date on which both groups have arrived at the common destination.',
     helpReturnFlights: 'Number of flight segments from the common destination back to a departure airport of the respective group.',
     queued: 'queued', running: 'running', paused: 'paused', completed: 'completed', failed: 'failed', cancelled: 'cancelled',
@@ -80,7 +82,7 @@ const I18N = {
     pausing: 'Search job is being paused', resuming: 'Search job is being resumed', deleteConfirm: 'Permanently delete this search job and all associated flight data?',
     deleteFailed: 'Deletion failed:', deleted: 'Search job and flight data deleted', jobStarted: 'Search job started', jobRepeated: 'New search job started with the same settings', invalidDateRange: 'The latest departure must not be before the earliest departure.', dateRangeTooLong: 'The departure window may span no more than 92 days (about three months).', invalidTripDays: 'Min. trip days must not exceed max. trip days.', error: 'Error:',
     compareDestinations: 'Comparing destinations …', collectTwoFirst: 'Please collect two completed search jobs first.',
-    arrivalDifference: 'Arrival difference', returnWindow: 'Return window', outboundFlight: 'Outbound', returnRoute: 'Return route', travelerTotal: 'Total:', calendarDays: 'calendar days', hours: 'hours', noCommon: 'No common direct destinations match these conditions.', noCommonRoundTrips: 'No common destinations with matching return routes were found.', invalidDestinationDays: 'The minimum stay must not exceed the maximum stay.', invalidReturnFlights: 'Min. flights per return route must not exceed max. flights per return route.',
+    arrivalDifference: 'Arrival difference', returnDifference: 'Return-flight difference', returnWindow: 'Return window', outboundFlight: 'Outbound', returnRoute: 'Return route', travelerTotal: 'Total:', calendarDays: 'calendar days', hours: 'hours', noCommon: 'No common direct destinations match these conditions.', noCommonRoundTrips: 'No common destinations with matching return routes were found.', invalidDestinationDays: 'The minimum stay must not exceed the maximum stay.', invalidReturnFlights: 'Min. flights per return route must not exceed max. flights per return route.',
     datasetContains: 'The selected datasets allow airport changes up to', createdAt: 'Created:', priceData: 'Price data:', noPriceData: 'no price data yet', minutesAgo: 'min ago', hoursAgo: 'h ago', daysAgo: 'days ago', enterAirportFirst: 'Enter a departure airport first.', enterTargetFirst: 'Enter a desired destination first.', loadingNearby: 'Finding nearby Ryanair airports …', nearbyAdded: 'Added:', noNearbyAdded: 'No additional Ryanair airports found within this radius.', nearbyFailed: 'Nearby airports could not be loaded.', languageGerman: 'German', languageEnglish: 'English'
   }
 };
