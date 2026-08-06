@@ -49,6 +49,7 @@ systems.
 - pause, resume and permanently delete search jobs
 - global provider-query queue with a three-hour cache shared by all search jobs
 - support for `Retry-After`, exponential retries and optional throttling
+- complete pagination and small internal date chunks for long Ryanair result sets
 - demo data source for safe functional testing
 
 ### Requirements
@@ -485,8 +486,9 @@ auf anderen Docker-Systemen.
 - deutscher und englischer Bedienmodus
 - Live-Anzeige von Suchdauer, Abfragen, Cache-Treffern und Angeboten
 - Suchaufträge pausieren, fortsetzen und vollständig löschen
-- Cache für identische Airline-Abfragen
+- globale Provider-Warteschlange mit einem Drei-Stunden-Cache für alle Suchaufträge
 - `Retry-After`, exponentielle Wiederholungen und optionale Drosselung
+- vollständige Paginierung und kleine interne Datumsblöcke für lange Ryanair-Ergebnislisten
 - Demo-Datenquelle für gefahrlose Funktionstests
 
 ## Voraussetzungen

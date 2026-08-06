@@ -26,6 +26,7 @@ from .providers import fetch_offers, fetch_provider_airports
 
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://faregraph:faregraph-local@localhost:5432/faregraph")
 CACHE_TTL_HOURS = max(1, int(os.getenv("CACHE_TTL_HOURS", "3")))
+CACHE_FORMAT_VERSION = 3
 AIRPORT_CATALOG_TTL_DAYS = max(1, int(os.getenv("AIRPORT_CATALOG_TTL_DAYS", "7")))
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 
@@ -128,8 +129,11 @@ def init_db():
                         max_price numeric(10,2) NOT NULL,
                         offers jsonb NOT NULL,
                         fetched_at timestamptz NOT NULL DEFAULT now(),
+                        format_version integer NOT NULL DEFAULT 0,
                         UNIQUE(provider, origin, date_from, date_to, max_price)
                     );
+                    ALTER TABLE provider_query_cache
+                      ADD COLUMN IF NOT EXISTS format_version integer NOT NULL DEFAULT 0;
                     CREATE TABLE IF NOT EXISTS provider_airports (
                         provider text NOT NULL,
                         code char(3) NOT NULL,
@@ -410,9 +414,13 @@ def cached_fetch_offers(
             cur.execute("""
                 SELECT offers,fetched_at FROM provider_query_cache
                 WHERE provider=%s AND origin=%s AND date_from<=%s AND date_to>=%s AND max_price>=%s
+                  AND format_version=%s
                   AND fetched_at >= now() - (%s * interval '1 hour')
                 ORDER BY (date_to-date_from),max_price,fetched_at DESC LIMIT 1
-            """, (provider, origin, date_from, date_to, round(max_price, 2), CACHE_TTL_HOURS))
+            """, (
+                provider, origin, date_from, date_to, round(max_price, 2),
+                CACHE_FORMAT_VERSION, CACHE_TTL_HOURS,
+            ))
             row = cur.fetchone()
         if row:
             offers = _filter_cached_offers(
@@ -424,11 +432,13 @@ def cached_fetch_offers(
         fetched_at = datetime.now(timezone.utc)
         with connect() as con, con.cursor() as cur:
             cur.execute("""
-                INSERT INTO provider_query_cache(provider,origin,date_from,date_to,max_price,offers,fetched_at)
-                VALUES (%s,%s,%s,%s,%s,%s::jsonb,now())
+                INSERT INTO provider_query_cache
+                  (provider,origin,date_from,date_to,max_price,offers,fetched_at,format_version)
+                VALUES (%s,%s,%s,%s,%s,%s::jsonb,now(),%s)
                 ON CONFLICT (provider,origin,date_from,date_to,max_price)
-                DO UPDATE SET offers=excluded.offers, fetched_at=now()
-            """, (*key, _serialize_offers(offers)))
+                DO UPDATE SET offers=excluded.offers, fetched_at=now(),
+                  format_version=excluded.format_version
+            """, (*key, _serialize_offers(offers), CACHE_FORMAT_VERSION))
         return offers, False, fetched_at
 
 

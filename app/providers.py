@@ -146,7 +146,11 @@ def fetch_ryanair(origin: str, date_from: date, date_to: date, max_price: float)
     with httpx.Client(timeout=30, follow_redirects=True, headers={"User-Agent": "FareGraph/0.1"}) as client:
         chunk_from = date_from
         while chunk_from <= date_to:
-            chunk_to = min(chunk_from + timedelta(days=30), date_to)
+            # Ryanair's fare finder can omit valid fares from broad date
+            # windows even when every result page is consumed. Three-day
+            # windows stay complete in practice without requiring one request
+            # per calendar day.
+            chunk_to = min(chunk_from + timedelta(days=2), date_to)
             params = {
                 "departureAirportIataCode": origin.upper(),
                 "outboundDepartureDateFrom": chunk_from.isoformat(),
@@ -156,7 +160,9 @@ def fetch_ryanair(origin: str, date_from: date, date_to: date, max_price: float)
                 "market": "de-de",
                 "offset": 0,
             }
-            for _ in range(10):
+            seen_offsets = {0}
+            page_count = 0
+            while True:
                 response = _get_with_retry(client, RYANAIR_FARES, params=params)
                 payload = response.json()
                 rows = payload.get("fares", [])
@@ -166,7 +172,14 @@ def fetch_ryanair(origin: str, date_from: date, date_to: date, max_price: float)
                         offers.append(parsed)
                 if not payload.get("nextPage") or not rows:
                     break
-                params["offset"] = int(params["offset"]) + len(rows)
+                next_offset = int(params["offset"]) + len(rows)
+                page_count += 1
+                if next_offset in seen_offsets or page_count >= 200:
+                    raise httpx.TransportError(
+                        "Ryanair-Paginierung konnte nicht vollständig abgeschlossen werden"
+                    )
+                seen_offsets.add(next_offset)
+                params["offset"] = next_offset
             chunk_from = chunk_to + timedelta(days=1)
     return offers
 
