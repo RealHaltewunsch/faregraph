@@ -226,6 +226,10 @@ class RouteQuery(BaseModel):
     job_ids: list[uuid.UUID] = Field(default_factory=list, max_length=12)
     end_airports: list[str] = Field(min_length=1)
     required_visit_airports: list[str] = Field(default_factory=list)
+    departure_from: date | None = None
+    departure_to: date | None = None
+    min_trip_days: int | None = Field(default=None, ge=1, le=14)
+    max_trip_days: int | None = Field(default=None, ge=1, le=14)
     min_segments: int = Field(default=2, ge=1, le=6)
     max_segments: int = Field(default=4, ge=1, le=6)
     min_connection_hours: int = Field(default=8, ge=0, le=168)
@@ -240,6 +244,14 @@ class RouteQuery(BaseModel):
         self.job_ids = list(dict.fromkeys(selected))
         if not self.job_ids:
             raise ValueError("Mindestens ein Datensatz muss ausgewählt werden")
+        if (self.departure_from is None) != (self.departure_to is None):
+            raise ValueError("Frühester und spätester Abflug müssen gemeinsam angegeben werden")
+        if self.departure_from and self.departure_to < self.departure_from:
+            raise ValueError("Der späteste Abflug darf nicht vor dem frühesten Abflug liegen")
+        if (self.min_trip_days is None) != (self.max_trip_days is None):
+            raise ValueError("Min. und Max. Reisetage müssen gemeinsam angegeben werden")
+        if self.min_trip_days is not None and self.min_trip_days > self.max_trip_days:
+            raise ValueError("Min. Reisetage darf Max. Reisetage nicht überschreiten")
         return self
 
 
@@ -1149,19 +1161,40 @@ def find_routes(query: RouteQuery):
             ))
             if search_direction == "round_trip":
                 round_trip_targets.update(settings.get("target_airports", []))
-        min_trip_days = max(int(settings.get("min_trip_days", 0)) for settings in settings_list)
-        max_trip_days = min(int(settings["max_trip_days"]) for settings in settings_list)
+        collected_min_trip_days = max(int(settings.get("min_trip_days", 1)) for settings in settings_list)
+        collected_max_trip_days = min(int(settings["max_trip_days"]) for settings in settings_list)
+        min_trip_days = query.min_trip_days or collected_min_trip_days
+        max_trip_days = query.max_trip_days or collected_max_trip_days
         if min_trip_days > max_trip_days:
-            raise HTTPException(422, "Die Reisedauer-Einstellungen der Datensätze überschneiden sich nicht")
+            raise HTTPException(422, "Min. Reisetage darf Max. Reisetage nicht überschreiten")
+        if max_trip_days > collected_max_trip_days:
+            raise HTTPException(
+                422,
+                f"Die ausgewählten Datensätze wurden nur für Reisen bis {collected_max_trip_days} Tage gesammelt",
+            )
         min_trip_duration = timedelta(days=min_trip_days)
         max_trip_duration = timedelta(days=max_trip_days)
+        requested_departure_window = (
+            (query.departure_from, query.departure_to)
+            if query.departure_from and query.departure_to else None
+        )
+        offer_date_from = query.departure_from or min(window[0] for window in first_departure_windows)
+        offer_date_to = query.departure_to or max(window[1] for window in first_departure_windows)
+        offer_time_from = datetime.combine(
+            offer_date_from - timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc,
+        )
+        offer_time_to = datetime.combine(
+            offer_date_to + timedelta(days=max_trip_days + 2), datetime.min.time(), tzinfo=timezone.utc,
+        )
         cur.execute("""
             SELECT DISTINCT ON (provider,airline,flight_number,origin,destination,departure_time,arrival_time)
               id,airline,flight_number,origin,destination,departure_time,arrival_time,
               price,currency,booking_url
-            FROM flight_offers WHERE search_job_id = ANY(%s)
+            FROM flight_offers
+            WHERE search_job_id = ANY(%s)
+              AND departure_time >= %s AND departure_time < %s
             ORDER BY provider,airline,flight_number,origin,destination,departure_time,arrival_time,fetched_at DESC
-        """, (job_ids,))
+        """, (job_ids, offer_time_from, offer_time_to))
         rows = cur.fetchall()
 
     by_origin: dict[str, list[dict]] = {}
@@ -1214,12 +1247,17 @@ def find_routes(query: RouteQuery):
                 continue
             for stored_offer in by_origin.get(departure_airport, []):
                 offer = stored_offer.copy()
-                departure_date = offer["departure_time"].date()
-                if not path and not any(
-                    departure_from <= departure_date <= departure_to
-                    for departure_from, departure_to in first_departure_windows
-                ):
-                    continue
+                departure_date = _local_date(offer["departure_time"], offer["origin_airport"])
+                if not path:
+                    if not any(
+                        departure_from <= departure_date <= departure_to
+                        for departure_from, departure_to in first_departure_windows
+                    ):
+                        continue
+                    if requested_departure_window and not (
+                        requested_departure_window[0] <= departure_date <= requested_departure_window[1]
+                    ):
+                        continue
                 if earliest and offer["departure_time"] < earliest:
                     continue
                 if offer["destination"] in visited and offer["destination"] not in ends:

@@ -237,9 +237,12 @@ After a collection job has completed:
 3. Enter the permitted final airports and, when needed, a list of airports of
    which at least one must be visited. FareGraph prefills these fields for
    targeted collection jobs.
-4. Set the minimum and maximum number of flights.
-5. Set the minimum stay after arrival and the total budget.
-6. Click **Find cheapest routes**.
+4. Limit the trip start to a date window inside the selected datasets and set
+   the minimum and maximum trip duration. This filters the route query only;
+   the collected data remains unchanged.
+5. Set the minimum and maximum number of flights.
+6. Set the minimum stay after arrival and the total budget.
+7. Click **Find cheapest routes**.
 
 `Max. flights = 2` does not automatically mean a return trip. It permits two
 individual segments, so it can produce either `A → B → A` or `A → B → C` when
